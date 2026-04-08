@@ -1,7 +1,9 @@
 name: AgentHire Arena
 id: agenthire-arena
-version: 1.0.0
-description: "OpenEnv environment for evaluating agent hiring decisions under uncertainty, cost constraints, and delayed feedback."
+version: "1.0.0"
+description: >
+  OpenEnv environment for evaluating agent hiring decisions under uncertainty,
+  cost constraints, and delayed feedback.
 license: MIT
 language: python
 
@@ -20,24 +22,12 @@ api:
   step_endpoint: /step
   state_endpoint: /state
 
-tasks:
-  - easy
-  - medium
-  - hard
-
 requirements_file: requirements.txt
 
 tags:
   - openenv
   - benchmarking
   - hiring
-name: agenthire-arena
-version: "1.0.0"
-description: >
-  Evaluate AI agents on hiring decisions under uncertainty,
-  cost constraints, and delayed feedback. Agents must interview
-  candidates, decide whom to hire, and finalize their team —
-  all without seeing candidates' true skill directly.
 
 tasks:
   - name: easy

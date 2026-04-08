@@ -233,4 +233,17 @@ curl -s http://localhost:7860/metrics | jq .
 ```
 
 If all of the above succeed, the repository is ready for submission.
-# Agent-Hire-Arena
+
+---
+
+## Hugging Face Spaces
+
+This repository is already set up for a Docker-based Hugging Face Space.
+
+1. Create a new Space on Hugging Face.
+2. Choose `Docker` as the Space SDK.
+3. Connect this GitHub repo or upload the repository contents.
+4. Set any needed secrets only for inference testing, not for the hosted environment itself.
+5. The Space will start from the root [app.py](app.py), which re-exports the FastAPI app in [server/app.py](server/app.py).
+
+If you redeploy after changes, make sure the Space picks up the repo root `Dockerfile` and exposes port `7860`.
