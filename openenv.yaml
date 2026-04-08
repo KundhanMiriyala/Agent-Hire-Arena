@@ -1,0 +1,159 @@
+name: AgentHire Arena
+id: agenthire-arena
+version: 1.0.0
+description: "OpenEnv environment for evaluating agent hiring decisions under uncertainty, cost constraints, and delayed feedback."
+license: MIT
+language: python
+
+entrypoint:
+  module: server.environment
+  class: HiringEnvironment
+
+models:
+  action: models.HiringAction
+  observation: models.HiringObservation
+  reward: models.HiringReward
+  state: models.HiringState
+
+api:
+  reset_endpoint: /reset
+  step_endpoint: /step
+  state_endpoint: /state
+
+tasks:
+  - easy
+  - medium
+  - hard
+
+requirements_file: requirements.txt
+
+tags:
+  - openenv
+  - benchmarking
+  - hiring
+name: agenthire-arena
+version: "1.0.0"
+description: >
+  Evaluate AI agents on hiring decisions under uncertainty,
+  cost constraints, and delayed feedback. Agents must interview
+  candidates, decide whom to hire, and finalize their team —
+  all without seeing candidates' true skill directly.
+
+tasks:
+  - name: easy
+    description: "5 candidates, low noise. Pick the best candidate from clean signals."
+    budget: 300
+    num_candidates: 5
+    noise_level: 0.05
+    decoy_fraction: 0.0
+
+  - name: medium
+    description: "10 candidates, medium noise. Balance interview cost vs hire quality."
+    budget: 220
+    num_candidates: 10
+    noise_level: 0.15
+    decoy_fraction: 0.0
+
+  - name: hard
+    description: "20 candidates, high noise + 25% decoys. Zero budget slack. Misleading resumes."
+    budget: 200
+    num_candidates: 20
+    noise_level: 0.30
+    decoy_fraction: 0.25
+
+action_space:
+  type: discrete
+  actions:
+    - name: interview
+      parameters:
+        candidate_id: string
+      cost: 10
+      description: "Reveals interview_score for the candidate. Can only be done once per candidate."
+
+    - name: hire
+      parameters:
+        candidate_id: string
+      cost: 50
+      description: "Hires the candidate. Blind hire (without prior interview) incurs step penalty."
+
+    - name: skip
+      parameters:
+        candidate_id: string
+      cost: 0
+      description: "Permanently rejects a candidate. No cost."
+
+    - name: finalize
+      parameters: {}
+      cost: 0
+      description: "Ends the episode and triggers the grader."
+
+observation_space:
+  fields:
+    - name: candidates
+      type: List[CandidateProfile]
+      description: "All candidates with resume_score visible; true_skill hidden."
+
+    - name: budget_remaining
+      type: float
+      description: "Remaining budget units."
+
+    - name: interviews_done
+      type: "Dict[str, float]"
+      description: "Maps candidate_id to interview_score for already-interviewed candidates."
+
+    - name: hires_made
+      type: List[str]
+      description: "List of hired candidate_ids."
+
+    - name: skipped
+      type: List[str]
+      description: "List of permanently rejected candidate_ids."
+
+    - name: step_num
+      type: int
+      description: "Current step index."
+
+    - name: max_steps
+      type: int
+      description: "Maximum steps allowed for this task."
+
+    - name: last_action_result
+      type: string
+      description: "Human-readable outcome of the previous action."
+
+    - name: done
+      type: bool
+      description: "True when the episode has ended."
+
+reward:
+  step_level:
+    - event: "interview candidate in uncertain zone (resume 0.4-0.75)"
+      value: +0.05
+    - event: "hire after interviewing"
+      value: +0.10
+    - event: "blind hire (hire without interview)"
+      value: -0.05
+    - event: "budget exhausted"
+      value: -0.10
+
+  final:
+    easy_medium: "avg(true_skill of hires) - (total_cost / budget), clipped [0, 1]"
+    hard: "avg(true_skill of hires) - (total_cost / budget) - 0.20 * (decoy_hires / total_hires), clipped [0, 1]"
+
+endpoints:
+  reset:
+    method: POST
+    path: /reset
+    body:
+      task: string
+
+  step:
+    method: POST
+    path: /step
+    body:
+      action: string
+      candidate_id: string (optional)
+
+  state:
+    method: GET
+    path: /state

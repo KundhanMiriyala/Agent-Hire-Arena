@@ -1,0 +1,7 @@
+[tool.hf.space]
+sdk = "docker"
+title = "AgentHire Arena"
+emoji = "🎯"
+description = "OpenEnv environment to evaluate agent hiring decisions under uncertainty."
+license = "mit"
+hardware = "cpu"

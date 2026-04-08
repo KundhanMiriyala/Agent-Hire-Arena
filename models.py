@@ -1,0 +1,70 @@
+from __future__ import annotations
+from typing import Dict, List, Optional
+from pydantic import BaseModel, Field
+
+
+class CandidateProfile(BaseModel):
+    candidate_id: str
+    name: str
+    resume_score: float          # noisy proxy, visible to agent
+    years_experience: int        # noisy at medium/hard
+    skills: List[str]            # partially noisy on hard
+
+    # Hidden from agent — excluded from serialization
+    true_skill: float = Field(exclude=True)
+    is_decoy: bool = Field(exclude=True, default=False)
+
+    class Config:
+        # Allow the full object (with hidden fields) to exist in memory
+        # but exclude hidden fields when serializing to JSON/dict for the agent
+        pass
+
+    def to_agent_view(self) -> dict:
+        """Returns only the fields the agent is allowed to see."""
+        return {
+            "candidate_id": self.candidate_id,
+            "name": self.name,
+            "resume_score": round(self.resume_score, 3),
+            "years_experience": self.years_experience,
+            "skills": self.skills,
+        }
+
+
+class HiringAction(BaseModel):
+    action: str                          # "interview" | "hire" | "skip" | "finalize"
+    candidate_id: Optional[str] = None   # required for interview/hire/skip
+
+
+class HiringObservation(BaseModel):
+    candidates: List[dict]               # agent-view dicts (no hidden fields)
+    budget_remaining: float
+    interviews_done: Dict[str, float]    # candidate_id -> interview_score
+    hires_made: List[str]                # candidate_ids
+    skipped: List[str]                   # candidate_ids
+    step_num: int
+    max_steps: int
+    last_action_result: str
+    done: bool
+
+
+class HiringReward(BaseModel):
+    step_reward: float
+    final_score: Optional[float] = None  # set only on finalize()
+    reason: str
+
+
+class HiringState(BaseModel):
+    """Full internal state — never sent to agent directly."""
+    task_name: str
+    candidates: List[CandidateProfile]   # includes hidden fields
+    budget_remaining: float
+    budget_total: float
+    interviews_done: Dict[str, float]
+    hires_made: List[str]
+    skipped: List[str]
+    step_rewards: List[float]
+    step_num: int
+    max_steps: int
+    last_action_result: str
+    done: bool
+    final_score: Optional[float] = None

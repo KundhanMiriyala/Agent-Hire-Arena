@@ -1,0 +1,63 @@
+from dataclasses import dataclass
+from typing import Dict
+
+
+@dataclass
+class TaskConfig:
+    name: str
+    num_candidates: int
+    noise_level: float       # std dev of gaussian noise on resume_score
+    budget: float
+    seed: int
+    decoy_fraction: float    # fraction of candidates that are decoys
+    max_steps: int
+    description: str
+
+
+TASKS: Dict[str, TaskConfig] = {
+    "easy": TaskConfig(
+        name="easy",
+        num_candidates=5,
+        noise_level=0.05,
+        budget=300.0,
+        seed=42,
+        decoy_fraction=0.0,
+        max_steps=20,
+        description=(
+            "5 candidates, low noise. Clean signals. "
+            "Goal: identify and hire the best candidate."
+        ),
+    ),
+    "medium": TaskConfig(
+        name="medium",
+        num_candidates=10,
+        noise_level=0.15,
+        budget=220.0,
+        seed=137,
+        decoy_fraction=0.0,
+        max_steps=30,
+        description=(
+            "10 candidates, medium noise. Budget constrains full exploration. "
+            "Goal: balance interview cost vs hire quality."
+        ),
+    ),
+    "hard": TaskConfig(
+        name="hard",
+        num_candidates=20,
+        noise_level=0.30,
+        budget=200.0,          # corrected: 5×10 + 3×50 = 200, zero slack
+        seed=999,
+        decoy_fraction=0.25,   # 5 of 20 are decoys
+        max_steps=50,
+        description=(
+            "20 candidates, high noise + 25% decoys. Zero budget slack. "
+            "Misleading resumes. Goal: avoid decoys and build the best team."
+        ),
+    ),
+}
+
+
+def get_task(name: str) -> TaskConfig:
+    if name not in TASKS:
+        raise ValueError(f"Unknown task '{name}'. Choose from: {list(TASKS.keys())}")
+    return TASKS[name]
