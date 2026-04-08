@@ -82,17 +82,18 @@ def root():
 
 
 @app.post("/reset", response_model=HiringObservation)
-def reset(request: ResetRequest):
+def reset(request: Optional[ResetRequest] = None):
     """
     Start a new episode for the given task.
     Returns the initial HiringObservation.
     """
-    if request.task not in TASKS:
+    task = request.task if request is not None else "easy"
+    if task not in TASKS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown task '{request.task}'. Choose from: {list(TASKS.keys())}",
+            detail=f"Unknown task '{task}'. Choose from: {list(TASKS.keys())}",
         )
-    observation = env.reset(task=request.task)
+    observation = env.reset(task=task)
     return observation
 
 
