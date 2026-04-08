@@ -30,9 +30,25 @@ def test_grade_no_hires_returns_zero():
 
 
 def test_grade_easy_formula():
-    # Two hired candidates with known true skills
-    c1 = CandidateProfile(candidate_id="C01", name="A", resume_score=0.8, years_experience=5, skills=["Python"], true_skill=0.8)
-    c2 = CandidateProfile(candidate_id="C02", name="B", resume_score=0.6, years_experience=3, skills=["SQL"], true_skill=0.6)
+    # Two hired candidates with known true skills and distinct roles.
+    c1 = CandidateProfile(
+        candidate_id="C01",
+        name="A",
+        resume_score=0.8,
+        years_experience=5,
+        role="ML Engineer",
+        skills=["Python"],
+        true_skill=0.8,
+    )
+    c2 = CandidateProfile(
+        candidate_id="C02",
+        name="B",
+        resume_score=0.6,
+        years_experience=3,
+        role="Backend",
+        skills=["SQL"],
+        true_skill=0.6,
+    )
 
     task = get_task("easy")
     # Use the task's budget so cost ratio calculation is correct.
@@ -42,5 +58,69 @@ def test_grade_easy_formula():
     )
 
     sc = grade(state, task)
-    # avg_true_skill = 0.7, cost_ratio = 0.5 -> score = 0.2
-    assert pytest.approx(sc, rel=1e-3) == 0.2
+    # Updated grader is multi-objective; assert bounded and meaningfully positive.
+    assert 0.0 <= sc <= 1.0
+    assert sc > 0.2
+
+
+def test_grade_role_coverage_and_finalize_penalty():
+    task = get_task("easy")
+
+    required_role_candidate = CandidateProfile(
+        candidate_id="C01",
+        name="A",
+        resume_score=0.75,
+        years_experience=4,
+        role="ML Engineer",
+        skills=["Python"],
+        true_skill=0.75,
+    )
+    non_required_role_candidate = CandidateProfile(
+        candidate_id="C01",
+        name="A",
+        resume_score=0.75,
+        years_experience=4,
+        role="Backend",
+        skills=["Python"],
+        true_skill=0.75,
+    )
+
+    covered_state = make_state_with_hires(
+        [required_role_candidate],
+        ["C01"],
+        task.budget,
+        task.budget - 50.0,
+        task_name="easy",
+    )
+    uncovered_state = make_state_with_hires(
+        [non_required_role_candidate],
+        ["C01"],
+        task.budget,
+        task.budget - 50.0,
+        task_name="easy",
+    )
+
+    covered_score = grade(covered_state, task)
+    uncovered_score = grade(uncovered_state, task)
+
+    assert covered_score > uncovered_score
+
+    early_state = make_state_with_hires(
+        [required_role_candidate],
+        ["C01"],
+        task.budget,
+        task.budget - 50.0,
+        task_name="easy",
+    )
+    early_state.step_num = 1
+
+    late_state = make_state_with_hires(
+        [required_role_candidate],
+        ["C01"],
+        task.budget,
+        task.budget - 50.0,
+        task_name="easy",
+    )
+    late_state.step_num = 5
+
+    assert grade(early_state, task) < grade(late_state, task)

@@ -8,11 +8,13 @@ class CandidateProfile(BaseModel):
     name: str
     resume_score: float          # noisy proxy, visible to agent
     years_experience: int        # noisy at medium/hard
+    role: str                    # visible role for team-composition reasoning
     skills: List[str]            # partially noisy on hard
 
     # Hidden from agent — excluded from serialization
     true_skill: float = Field(exclude=True)
     is_decoy: bool = Field(exclude=True, default=False)
+    interview_difficulty: float = Field(exclude=True, default=1.0)
 
     class Config:
         # Allow the full object (with hidden fields) to exist in memory
@@ -26,6 +28,7 @@ class CandidateProfile(BaseModel):
             "name": self.name,
             "resume_score": round(self.resume_score, 3),
             "years_experience": self.years_experience,
+            "role": self.role,
             "skills": self.skills,
         }
 

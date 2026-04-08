@@ -142,8 +142,9 @@ class HiringEnvironment:
             ).digest()
             seed_int = int.from_bytes(seed_bytes[:4], "big") % (2 ** 31)
             rng = np.random.default_rng(seed_int)
-            noise = float(rng.normal(0.0, 0.08))
-            interview_score = float(np.clip(candidate.true_skill + noise, 0.0, 1.0))
+            noise = float(rng.normal(0.0, 0.10))
+            raw_interview = (candidate.true_skill + noise) * float(candidate.interview_difficulty)
+            interview_score = float(np.clip(raw_interview, 0.0, 1.0))
             s.interviews_done[cid] = round(interview_score, 3)
 
             # Step reward: interviewing in the uncertain zone is smart
@@ -251,9 +252,11 @@ class HiringEnvironment:
                 {
                     "candidate_id": c.candidate_id,
                     "name": c.name,
+                    "role": c.role,
                     "resume_score": c.resume_score,
                     "true_skill": c.true_skill,
                     "is_decoy": c.is_decoy,
+                    "interview_difficulty": c.interview_difficulty,
                 }
                 for c in s.candidates
             ],

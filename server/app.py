@@ -132,6 +132,7 @@ def list_tasks():
             "budget": cfg.budget,
             "decoy_fraction": cfg.decoy_fraction,
             "max_steps": cfg.max_steps,
+            "role_requirements": cfg.role_requirements,
             "description": cfg.description,
         }
         for name, cfg in TASKS.items()

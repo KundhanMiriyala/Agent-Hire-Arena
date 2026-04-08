@@ -130,7 +130,10 @@ GET  /tasks        List all task configs
 |----------|-------------|
 | `API_BASE_URL` | URL of the environment server |
 | `MODEL_NAME` | Model name for the OpenAI-compatible API |
-| `HF_TOKEN` | HuggingFace token (used as API key for HF endpoints) |
+| `LLM_PROVIDER` | Optional override: `mock`, `hf`, or `openai` |
+| `OPENAI_API_KEY` | Final-submission key for OpenAI client runs |
+| `HF_TOKEN` | Testing-only token for Hugging Face router runs |
+| `HF_API_BASE_URL` | Optional Hugging Face router base URL |
 
 ---
 
@@ -158,7 +161,7 @@ agenthire-arena/
 
 ## Baseline Scores
 
-Run `python inference.py` with GPT-4o-mini to reproduce:
+Run `python inference.py` with `OPENAI_API_KEY` to reproduce the final submission baseline. For local testing, set `HF_TOKEN` and optionally `HF_API_BASE_URL`.
 
 | Task | Baseline Score |
 |------|---------------|

@@ -11,6 +11,7 @@ class TaskConfig:
     seed: int
     decoy_fraction: float    # fraction of candidates that are decoys
     max_steps: int
+    role_requirements: Dict[str, int]
     description: str
 
 
@@ -23,6 +24,7 @@ TASKS: Dict[str, TaskConfig] = {
         seed=42,
         decoy_fraction=0.0,
         max_steps=20,
+        role_requirements={"ML Engineer": 1},
         description=(
             "5 candidates, low noise. Clean signals. "
             "Goal: identify and hire the best candidate."
@@ -36,6 +38,7 @@ TASKS: Dict[str, TaskConfig] = {
         seed=137,
         decoy_fraction=0.0,
         max_steps=30,
+        role_requirements={"ML Engineer": 1, "Backend": 1},
         description=(
             "10 candidates, medium noise. Budget constrains full exploration. "
             "Goal: balance interview cost vs hire quality."
@@ -49,6 +52,7 @@ TASKS: Dict[str, TaskConfig] = {
         seed=999,
         decoy_fraction=0.25,   # 5 of 20 are decoys
         max_steps=50,
+        role_requirements={"ML Engineer": 1, "Backend": 1, "Data Scientist": 1},
         description=(
             "20 candidates, high noise + 25% decoys. Zero budget slack. "
             "Misleading resumes. Goal: avoid decoys and build the best team."
