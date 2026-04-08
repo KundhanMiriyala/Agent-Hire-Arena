@@ -228,3 +228,4 @@ curl -s http://localhost:7860/metrics | jq .
 ```
 
 If all of the above succeed, the repository is ready for submission.
+# Agent-Hire-Arena
