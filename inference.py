@@ -2,16 +2,18 @@
 inference.py — Baseline LLM agent for AgentHire Arena.
 
 Reads from environment variables:
-    API_BASE_URL  — URL of the AgentHire Arena server (e.g. http://localhost:7860)
+    API_BASE_URL  — OpenAI-compatible model endpoint injected by the evaluator
+    API_KEY       — API key for the OpenAI-compatible model endpoint
     MODEL_NAME    — Model name for the OpenAI-compatible API
-    LLM_PROVIDER  — Optional override: "hf", "openai", or "mock"
-    OPENAI_API_KEY — OpenAI API key for final submission runs
-    HF_TOKEN      — HuggingFace token (used as API key for HF Inference Endpoints)
+    OPENENV_API_BASE_URL / ENV_API_BASE_URL / ENV_BASE_URL — optional environment server URL
+    LLM_PROVIDER  — Optional override: "mock" for local testing
+    OPENAI_API_KEY / HF_TOKEN — optional local fallbacks
 
 Run:
-    API_BASE_URL=http://localhost:7860 \
+    API_BASE_URL=https://router.example/v1 \
+    API_KEY=sk-xxx \
     MODEL_NAME=meta-llama/Meta-Llama-3-8B-Instruct \
-    HF_TOKEN=hf_xxx \
+    OPENENV_API_BASE_URL=http://localhost:7860 \
     python inference.py
 """
 
@@ -652,32 +654,25 @@ def main():
     if not MODEL_NAME:
         raise ValueError("MODEL_NAME environment variable is required.")
 
-    # Initialize OpenAI-compatible client
-    # Selection priority:
-    # 1. MOCK_OPENAI=1, MODEL_NAME==mock, or LLM_PROVIDER=mock -> local deterministic mock
-    # 2. LLM_PROVIDER=openai or OPENAI_API_KEY -> use OpenAI for final submission runs
-    # 3. LLM_PROVIDER=hf or HF_TOKEN -> use Hugging Face router for testing
-    # 4. fallback -> mock (safe)
+    # Initialize OpenAI-compatible client.
+    # Primary path for the evaluator: API_BASE_URL + API_KEY.
     mock_mode = os.environ.get("MOCK_OPENAI", "0") == "1" or MODEL_NAME == "mock"
     provider = os.environ.get("LLM_PROVIDER", "").strip().lower()
+    injected_api_base_url = os.environ.get("API_BASE_URL", "").strip()
+    injected_api_key = os.environ.get("API_KEY", "").strip()
 
     if mock_mode or provider == "mock":
         openai_client = _MockOpenAI()
     else:
-        openai_key = os.environ.get("OPENAI_API_KEY")
+        openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
         hf_token = os.environ.get("HF_TOKEN") or HF_TOKEN
 
-        if provider == "hf":
-            if not hf_token:
-                print("[WARN] LLM_PROVIDER=hf but HF_TOKEN is missing — falling back to mock client.")
-                openai_client = _MockOpenAI()
-            else:
-                hf_base_url = os.environ.get("HF_API_BASE_URL", "https://router.huggingface.co/v1")
-                print(f"[INFO] Using Hugging Face router at {hf_base_url} for testing.")
-                openai_client = OpenAI(api_key=hf_token, base_url=hf_base_url)
-        elif provider == "openai" or openai_key:
+        if injected_api_base_url and injected_api_key:
+            print(f"[INFO] Using injected OpenAI-compatible API at {injected_api_base_url}.")
+            openai_client = OpenAI(api_key=injected_api_key, base_url=injected_api_base_url)
+        elif openai_key:
             openai_client = OpenAI(api_key=openai_key)
-        elif hf_token:
+        elif provider == "hf" and hf_token:
             hf_base_url = os.environ.get("HF_API_BASE_URL", "https://router.huggingface.co/v1")
             print(f"[INFO] Using Hugging Face router at {hf_base_url} for testing.")
             openai_client = OpenAI(api_key=hf_token, base_url=hf_base_url)
