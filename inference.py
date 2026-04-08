@@ -95,6 +95,33 @@ HF_TOKEN     = os.environ.get("HF_TOKEN", "")
 
 TASKS_TO_RUN = ["easy", "medium", "hard"]
 
+
+def _looks_like_llm_endpoint(url: str) -> bool:
+    """Detect common model-router URLs that are not the environment API."""
+    u = (url or "").lower()
+    return any(token in u for token in ["litellm", "openai", "huggingface", "router", "/v1"])
+
+
+def _resolve_env_base_url() -> str:
+    """Pick a reliable environment base URL across local and judge runtimes.
+
+    Some runners export API_BASE_URL for model backends (e.g., LiteLLM).
+    In that case we must not use it as the environment URL.
+    """
+    candidates = [
+        os.environ.get("OPENENV_API_BASE_URL", ""),
+        os.environ.get("ENV_API_BASE_URL", ""),
+        os.environ.get("ENV_BASE_URL", ""),
+        os.environ.get("API_BASE_URL", ""),
+    ]
+
+    for c in candidates:
+        c = (c or "").strip()
+        if c and not _looks_like_llm_endpoint(c):
+            return c.rstrip("/")
+
+    return "http://127.0.0.1:7860"
+
 # ------------------------------------------------------------------ #
 #  System prompt (the most important piece — agents read this)         #
 # ------------------------------------------------------------------ #
@@ -658,15 +685,16 @@ def main():
             print("[WARN] No OPENAI_API_KEY or HF_TOKEN found — falling back to mock client.")
             openai_client = _MockOpenAI()
 
-    env_client = HiringEnvClient(base_url=API_BASE_URL)
+    env_base_url = _resolve_env_base_url()
+    env_client = HiringEnvClient(base_url=env_base_url)
 
     # Health check
     if not env_client.health():
         raise ConnectionError(
-            f"Cannot reach environment at {API_BASE_URL}. "
+            f"Cannot reach environment at {env_base_url}. "
             "Is the server running?"
         )
-    print(f"Connected to environment at {API_BASE_URL}")
+    print(f"Connected to environment at {env_base_url}")
     print(f"Model: {MODEL_NAME}")
 
     # Run all tasks and collect scores
