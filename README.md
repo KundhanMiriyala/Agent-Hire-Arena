@@ -170,6 +170,8 @@ Run `python inference.py` with GPT-4o-mini to reproduce:
 
 ---
 
+---
+
 ## Pre-submit Checklist
 
 Run these commands before submitting to the hackathon to ensure the repo passes validation and builds cleanly.
