@@ -1,4 +1,4 @@
-# AgentHire Arena 🎯
+# AgentHire Arena
 
 **Evaluate AI agents on hiring decisions under uncertainty, cost constraints, and delayed feedback.**
 
