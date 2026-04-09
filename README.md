@@ -1,249 +1,222 @@
 # AgentHire Arena
 
-**Evaluate AI agents on hiring decisions under uncertainty, cost constraints, and delayed feedback.**
+AgentHire Arena is an OpenEnv hiring simulation for evaluating agent decision-making under uncertainty, budget constraints, and delayed final rewards.
 
-AgentHire Arena is an [OpenEnv](https://openenv.dev) environment that challenges an AI agent to build the best team possible — without ever seeing a candidate's true skill. Resumes are noisy, interviews are costly, and performance is only revealed at the end.
+The agent must build a high-quality team while deciding when to interview, hire, skip, and finalize. Candidate resumes are noisy proxies, interview signals cost budget, and true skill is hidden until grading.
 
----
+## Why This Benchmark
+
+- Sequential decision-making with irreversible actions.
+- Budget-constrained exploration vs exploitation.
+- Hidden-signal setting with realistic decoys (hard mode).
+- Deterministic tasks and seeds for fully reproducible runs.
+- Judge-friendly introspection endpoints and score breakdown metrics.
+
+## Submission Snapshot
+
+- Environment: FastAPI OpenEnv-compatible server.
+- Tasks: easy, medium, hard.
+- Determinism: fixed task seeds and stable candidate generation.
+- Scoring: deterministic [0.0, 1.0] with transparent breakdown.
+- Baseline policy: deterministic heuristic loop in [inference.py](inference.py).
+- Extended benchmark policies: modular decision core in [policy.py](policy.py).
+
+## Task Levels
+
+| Task | Candidates | Noise (sigma) | Budget | Decoy Fraction | Main Challenge |
+|---|---:|---:|---:|---:|---|
+| easy | 5 | 0.05 | 300 | 0.0 | Basic quality selection |
+| medium | 10 | 0.15 | 220 | 0.0 | Cost-quality tradeoff |
+| hard | 20 | 0.30 | 200 | 0.25 | Decoy resistance with zero slack |
+
+Hard-mode budget math: 5 interviews x 10 + 3 hires x 50 = 200.
+
+## Action Space
+
+| Action | Input | Cost | Outcome |
+|---|---|---:|---|
+| interview | candidate_id | 10 | Reveals interview_score (once per candidate) |
+| hire | candidate_id | 50 | Adds candidate to team |
+| skip | candidate_id | 0 | Permanently rejects candidate |
+| finalize | - | 0 | Ends episode and computes final score |
+
+Important: the agent must call finalize to receive the final score.
+
+## Observation Model
+
+The agent receives:
+
+- candidate profiles with visible fields (resume_score, role, skills, etc.)
+- budget_remaining
+- interviews_done
+- hires_made
+- skipped
+- step_num and max_steps
+- last_action_result
+- done
+
+The agent does not receive true_skill or is_decoy.
+
+## Scoring (Implemented Grader)
+
+Final grading is implemented in [server/grader.py](server/grader.py) and uses a multi-objective formula:
+
+score = avg_true_skill + team_size_bonus + role_coverage_bonus - cost_penalty - decoy_penalty
+
+Where:
+
+- avg_true_skill = average true skill of hired candidates
+- team_size_bonus = min(team_size / 3, 1) x 0.25
+- role_coverage_bonus = 0.20 x (covered_required_roles / total_required_roles)
+- cost_penalty = (cost_ratio ^ 1.3) x 0.40
+- decoy_penalty = 0.25 x decoy_hire_ratio
+- early finalize multiplier = 0.70 when step_num < 3
+- final score is clipped to [0.0, 1.0]
+
+Step-level shaped rewards are implemented in [server/environment.py](server/environment.py):
+
+- +0.05 interview in uncertain resume zone (0.40 to 0.75)
+- +0.10 informed hire (after interview)
+- -0.05 blind hire
+- -0.10 budget effectively exhausted
+
+## API Endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | /reset | Start episode for task |
+| POST | /step | Apply one action |
+| GET | /state | Full internal state for judges/debug |
+| GET | /tasks | Task metadata |
+| GET | /metrics | Grader breakdown and telemetry |
+
+## Project Structure
+
+| Path | Purpose |
+|---|---|
+| [server/app.py](server/app.py) | FastAPI server and endpoints |
+| [server/environment.py](server/environment.py) | Core reset/step/state environment logic |
+| [server/tasks.py](server/tasks.py) | Task definitions and budgets |
+| [server/candidate_generator.py](server/candidate_generator.py) | Deterministic candidate generation |
+| [server/grader.py](server/grader.py) | Final score computation and explanation |
+| [models.py](models.py) | Shared action/observation/reward/state models |
+| [inference.py](inference.py) | Baseline agent loop |
+| [policy.py](policy.py) | Modular policy core and variants |
+| [scripts/benchmark_policies.py](scripts/benchmark_policies.py) | Variant and ablation benchmark runner |
 
 ## Quickstart
 
+### 1) Install dependencies
+
 ```bash
-# 1. Install dependencies
 pip install -r requirements.txt
+```
 
-# 2. Start the environment server
+### 2) Start environment server
+
+```bash
 uvicorn server.app:app --host 0.0.0.0 --port 7860
+```
 
-# 3. In a new terminal, run the LLM agent baseline
-export API_BASE_URL=http://localhost:7860
+### 3) Run baseline inference
+
+Bash:
+
+```bash
+export OPENENV_API_BASE_URL=http://127.0.0.1:7860
 export MODEL_NAME=gpt-4o-mini
 export OPENAI_API_KEY=sk-...
 python inference.py
 ```
 
----
+PowerShell:
 
-## Tasks
-
-| Task | Candidates | Noise (σ) | Budget | Decoys | Key Challenge |
-|------|-----------|-----------|--------|--------|--------------|
-| 🟢 easy | 5 | 0.05 | 300 | 0% | Pick best from clean signals |
-| 🟡 medium | 10 | 0.15 | 220 | 0% | Balance interview cost vs quality |
-| 🔴 hard | 20 | 0.30 | 200 | 25% | Avoid decoys, zero budget slack |
-
-**Hard task budget math:** 5 interviews (×10) + 3 hires (×50) = 200 exactly. Zero slack.
-
----
-
-## Action Space
-
-| Action | Parameters | Cost | Effect |
-|--------|-----------|------|--------|
-| `interview` | `candidate_id` | 10 | Reveals `interview_score`. Once per candidate. |
-| `hire` | `candidate_id` | 50 | Hires the candidate. Blind hire = penalty. |
-| `skip` | `candidate_id` | 0 | Permanently rejects. Free. |
-| `finalize` | — | 0 | Ends episode, triggers grader. **Must call to get score.** |
-
----
-
-## Observation Space
-
-```json
-{
-  "candidates": [
-    {
-      "candidate_id": "C01",
-      "name": "Alice",
-      "resume_score": 0.82,
-      "years_experience": 7,
-      "skills": ["Python", "Machine Learning", "SQL"]
-    }
-  ],
-  "budget_remaining": 220.0,
-  "interviews_done": {"C03": 0.741},
-  "hires_made": ["C03"],
-  "skipped": ["C07", "C09"],
-  "step_num": 4,
-  "max_steps": 30,
-  "last_action_result": "Hired Carol (C03) — informed hire. Budget remaining: 160.",
-  "done": false
-}
+```powershell
+$env:OPENENV_API_BASE_URL = "http://127.0.0.1:7860"
+$env:MODEL_NAME = "gpt-4o-mini"
+$env:OPENAI_API_KEY = "sk-..."
+python inference.py
 ```
 
-**Hidden from agent:** `true_skill`, `is_decoy` — revealed only at `/state` for judge inspection.
+## Policy Variants (Hackathon-Safe)
 
----
+Core environment behavior is unchanged. Policy improvements are opt-in and preserve baseline comparability.
 
-## Reward Function
+Environment variables:
 
-### Step-level (trajectory signal)
+| Variable | Values | Default | Purpose |
+|---|---|---|---|
+| POLICY_VARIANT | baseline, task-aware, planning | baseline | Select policy family |
+| POLICY_ROLE_AWARE | 0 or 1 | 1 | Enable role composition-aware selection |
+| POLICY_DECOY_GUARD | 0 or 1 | 1 | Enable decoy-risk guardrails |
 
-| Event | Reward |
-|-------|--------|
-| Interview a candidate in uncertain zone (resume 0.4–0.75) | +0.05 |
-| Hire after interviewing | +0.10 |
-| Blind hire (hire without interview) | −0.05 |
-| Budget exhausted mid-episode | −0.10 |
-| Skip | 0.00 |
+Examples:
 
-### Final score (on `finalize`)
-
-**Easy / Medium:**
-```
-score = avg(true_skill of hires) − (total_cost / budget)
+```bash
+POLICY_VARIANT=baseline python inference.py
+POLICY_VARIANT=task-aware python inference.py
+POLICY_VARIANT=planning python inference.py
 ```
 
-**Hard:**
-```
-score = avg(true_skill of hires) − (total_cost / budget) − 0.20 × (decoy_hires / total_hires)
-```
+## Benchmark and Ablations
 
-All scores clipped to `[0.0, 1.0]`.
+Run benchmark variants and ablation toggles with grader-aligned reporting:
 
----
-
-## API Endpoints
-
-```
-POST /reset        Body: {"task": "easy"}
-POST /step         Body: {"action": "interview", "candidate_id": "C01"}
-GET  /state        Full internal state (true_skill visible — for judges only)
-GET  /tasks        List all task configs
+```bash
+python scripts/benchmark_policies.py --env http://127.0.0.1:7860 --repeats 3
 ```
 
----
+Outputs:
 
-## What Makes It Hard
+- logs/policy_benchmark.json
+- logs/policy_benchmark.md
 
-- **Partial observability** — `true_skill` is never revealed
-- **Misleading signals** — decoys (Hard) have high resume scores but low true skill
-- **Delayed rewards** — hire quality only scored at `finalize()`
-- **Budget pressure** — every interview and hire is irreversible
-- **Exploration vs exploitation** — interviewing reduces hiring capacity
+The report includes:
 
----
+- per-task and overall scores
+- mean and standard deviation over repeats
+- grader component breakdown (avg_true_skill, team_size_bonus, role_coverage_bonus, cost_penalty, decoy_penalty)
 
-## Environment Variables for `inference.py`
+## Reproducibility
 
-| Variable | Description |
-|----------|-------------|
-| `API_BASE_URL` | URL of the environment server |
-| `MODEL_NAME` | Model name for the OpenAI-compatible API |
-| `LLM_PROVIDER` | Optional override: `mock`, `hf`, or `openai` |
-| `OPENAI_API_KEY` | Final-submission key for OpenAI client runs |
-| `HF_TOKEN` | Testing-only token for Hugging Face router runs |
-| `HF_API_BASE_URL` | Optional Hugging Face router base URL |
+- Task generation is deterministic per task seed.
+- Interview noise uses stable candidate/task-derived seeds.
+- Policy execution is deterministic for a fixed code version and settings.
+- Evaluations are reproducible across runs on the same commit.
 
----
+## Hackathon Judge Guide
 
-## Project Structure
+Recommended review flow:
 
-```
-agenthire-arena/
-├── models.py                  # Pydantic dataclasses
-├── client.py                  # HTTP client for the environment
-├── inference.py               # LLM agent baseline (agentic loop)
-├── openenv.yaml               # OpenEnv spec metadata
-├── requirements.txt
-├── Dockerfile
-├── README.md
-└── server/
-    ├── __init__.py
-    ├── app.py                 # FastAPI application
-    ├── environment.py         # Core reset/step/state logic
-    ├── tasks.py               # Task configs (easy/medium/hard)
-    ├── candidate_generator.py # Seeded candidate pool generator
-    └── grader.py              # Deterministic final scorer
-```
+1. Start server and run baseline once.
+2. Run policy benchmark with repeats.
+3. Inspect logs/policy_benchmark.md for variant deltas.
+4. Inspect /metrics and /state for transparent score attribution.
 
----
-
-## Baseline Scores
-
-Run `python inference.py` with `OPENAI_API_KEY` to reproduce the final submission baseline. For local testing, set `HF_TOKEN` and optionally `HF_API_BASE_URL`.
-
-| Task | Baseline Score |
-|------|---------------|
-| easy | ~0.62 |
-| medium | ~0.48 |
-| hard | ~0.31 |
-
-*(Scores are deterministic given fixed seeds and same model.)*
-
----
-
----
-
-## Pre-submit Checklist
-
-Run these commands before submitting to the hackathon to ensure the repo passes validation and builds cleanly.
-
-1. Install dependencies and validator
+## Pre-Submission Checklist
 
 ```bash
 pip install -r requirements.txt
-pip install openenv-core
-```
-
-2. Run tests
-
-```bash
-pytest
-```
-
-3. Validate OpenEnv spec
-
-```bash
+python -m pytest
 openenv validate
-```
-
-4. Regenerate `uv.lock` (run on a machine with `uv` available)
-
-```bash
-uv lock
-git add uv.lock
-git commit -m "Regenerate uv.lock"
-```
-
-5. Build Docker image
-
-```bash
 docker build -t agenthire-arena .
 ```
 
-6. Sanity-run the server and check endpoints
+Then verify:
 
-```bash
-uvicorn server.app:app --host 0.0.0.0 --port 7860
-curl -s http://localhost:7860/tasks
-curl -s -X POST http://localhost:7860/reset -H 'Content-Type: application/json' -d '{"task":"easy"}'
-```
+- /tasks, /reset, /step, /state, /metrics endpoints are healthy.
+- baseline run completes all tasks and finalizes.
+- benchmark script writes JSON and Markdown reports.
 
-7. Run the baseline (smoke)
+## Deployment Notes (Hugging Face Spaces)
 
-```bash
-API_BASE_URL=http://localhost:7860 MODEL_NAME=local-dummy HF_TOKEN=token python inference.py
-```
+The repository is Docker-ready.
 
-8. Verify metrics endpoint
+1. Create a Docker Space.
+2. Connect this repository.
+3. Ensure port 7860 is exposed.
+4. App entrypoint is [app.py](app.py), which exposes the FastAPI app from [server/app.py](server/app.py).
 
-```bash
-curl -s http://localhost:7860/metrics | jq .
-```
+## License
 
-If all of the above succeed, the repository is ready for submission.
-
----
-
-## Hugging Face Spaces
-
-This repository is already set up for a Docker-based Hugging Face Space.
-
-1. Create a new Space on Hugging Face.
-2. Choose `Docker` as the Space SDK.
-3. Connect this GitHub repo or upload the repository contents.
-4. Set any needed secrets only for inference testing, not for the hosted environment itself.
-5. The Space will start from the root [app.py](app.py), which re-exports the FastAPI app in [server/app.py](server/app.py).
-
-If you redeploy after changes, make sure the Space picks up the repo root `Dockerfile` and exposes port `7860`.
+MIT

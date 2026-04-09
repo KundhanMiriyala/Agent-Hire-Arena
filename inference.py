@@ -35,6 +35,7 @@ except Exception:
     pass
 
 from models import HiringObservation
+from policy import choose_policy_action
 
 
 # Simple mock OpenAI client for local offline testing
@@ -96,6 +97,9 @@ MODEL_NAME   = os.environ.get("MODEL_NAME", "gpt-4o-mini")
 HF_TOKEN     = os.environ.get("HF_TOKEN", "")
 
 TASKS_TO_RUN = ["easy", "medium", "hard"]
+POLICY_VARIANT = os.environ.get("POLICY_VARIANT", "baseline").strip().lower()
+POLICY_ROLE_AWARE = os.environ.get("POLICY_ROLE_AWARE", "1").strip() != "0"
+POLICY_DECOY_GUARD = os.environ.get("POLICY_DECOY_GUARD", "1").strip() != "0"
 
 
 def _looks_like_llm_endpoint(url: str) -> bool:
@@ -429,119 +433,18 @@ def _sanitize_model_action(model_action: Optional[dict], obs: HiringObservation)
 
 
 def choose_heuristic_action(obs: HiringObservation, task: str, safe_model_action: Optional[dict] = None) -> dict:
-    """Deterministic policy for strong baseline performance.
+    """Deterministic policy wrapper with selectable policy variants.
 
-    We keep the agent lightweight and reproducible by using the model for
-    narrative suggestions, but the actual submitted action comes from this
-    rule-based policy.
+    Default behavior is the original baseline variant for comparability.
     """
-    policy = TASK_POLICY[task]
-
-    remaining = [
-        c for c in obs.candidates
-        if c["candidate_id"] not in obs.hires_made
-        and c["candidate_id"] not in obs.skipped
-    ]
-
-    if not remaining:
-        return {"action": "finalize"}
-
-    interviewed = obs.interviews_done or {}
-    interviewed_ids = set(interviewed.keys())
-    uninterviewed = [c for c in remaining if c["candidate_id"] not in interviewed_ids]
-
-    can_interview = obs.budget_remaining >= 10
-    can_hire = obs.budget_remaining >= 50
-    hires_count = len(obs.hires_made)
-
-    # Build candidate lookups
-    by_id = {c["candidate_id"]: c for c in remaining}
-    all_by_id = {c["candidate_id"]: c for c in obs.candidates}
-    hired_roles = {
-        all_by_id[cid].get("role", "Unknown")
-        for cid in obs.hires_made
-        if cid in all_by_id
-    }
-
-    min_interviews_before_hire = policy["min_interviews_before_hire"]
-    min_interview_coverage = policy["min_interview_coverage"]
-    min_interviews_needed = max(
-        min_interviews_before_hire,
-        int(round(len(obs.candidates) * min_interview_coverage)),
+    return choose_policy_action(
+        obs=obs,
+        task=task,
+        model_action=safe_model_action,
+        variant=POLICY_VARIANT,
+        role_aware=POLICY_ROLE_AWARE,
+        decoy_risk_guard=POLICY_DECOY_GUARD,
     )
-
-    # Ranked interviewed candidates by value
-    interviewed_ranked = []
-    for cid, score in interviewed.items():
-        c = by_id.get(cid)
-        if c is None:
-            continue
-        role_bonus = 0.08 if (policy["target_hires"] > 1 and c.get("role") not in hired_roles) else 0.0
-        interviewed_ranked.append((cid, _candidate_value(c, score, task) + role_bonus, score, c["resume_score"]))
-    interviewed_ranked.sort(key=lambda x: x[1], reverse=True)
-
-    best_candidate_id = None
-    best_candidate_score = -1.0
-    best_candidate_interview = None
-    if interviewed_ranked:
-        best_candidate_id, best_candidate_score, best_candidate_interview, _ = interviewed_ranked[0]
-
-    # Interview queue: peak information zone first, then strong resumes.
-    sorted_uninterviewed = sorted(
-        uninterviewed,
-        key=lambda c: (
-            0.10 if (policy["target_hires"] > 1 and c.get("role") not in hired_roles) else 0.0,
-            _expected_interview_value(c, task, hired_roles),
-        ),
-        reverse=True,
-    )
-
-    if not can_interview and not can_hire:
-        return {"action": "finalize"}
-
-    interviews_done = len(interviewed)
-    top_interview_ids = [c["candidate_id"] for c in sorted_uninterviewed[:3]]
-
-    # Finalize when marginal value is low.
-    if _should_finalize(obs, task, best_candidate_score, interviews_done, hires_count, policy):
-        return {"action": "finalize"}
-
-    # Let LLM shape high-value interview/hire choices when suggestions are safe.
-    if safe_model_action and safe_model_action.get("action") == "interview" and can_interview:
-        model_cid = safe_model_action.get("candidate_id")
-        if model_cid in top_interview_ids:
-            return {"action": "interview", "candidate_id": model_cid}
-
-    if safe_model_action and safe_model_action.get("action") == "hire" and can_hire:
-        model_cid = safe_model_action.get("candidate_id")
-        model_candidate = by_id.get(model_cid)
-        model_interview = interviewed.get(model_cid)
-        if (
-            model_candidate
-            and interviews_done >= min_interviews_needed
-            and _should_hire(model_candidate, model_interview, task, policy["hire_interview_threshold"])
-        ):
-            return {"action": "hire", "candidate_id": model_cid}
-
-    # Interview high-value candidates first.
-    if can_interview and interviews_done < policy["target_interviews"] and sorted_uninterviewed:
-        return {"action": "interview", "candidate_id": sorted_uninterviewed[0]["candidate_id"]}
-
-    # Keep interviewing until enough of the pool has been evaluated.
-    if can_interview and interviews_done < min_interviews_needed and sorted_uninterviewed:
-        return {"action": "interview", "candidate_id": sorted_uninterviewed[0]["candidate_id"]}
-
-    # Then hire best interviewed candidate if it passes strict threshold.
-    if can_hire and best_candidate_id and interviews_done >= min_interviews_needed:
-        best_candidate = by_id.get(best_candidate_id)
-        if best_candidate and _should_hire(best_candidate, best_candidate_interview, task, policy["hire_interview_threshold"]):
-            return {"action": "hire", "candidate_id": best_candidate_id}
-
-    # If we still can interview and have unexplored candidates, continue exploration.
-    if can_interview and sorted_uninterviewed:
-        return {"action": "interview", "candidate_id": sorted_uninterviewed[0]["candidate_id"]}
-
-    return {"action": "finalize"}
 
 
 # ------------------------------------------------------------------ #
@@ -691,6 +594,12 @@ def main():
         )
     print(f"Connected to environment at {env_base_url}")
     print(f"Model: {MODEL_NAME}")
+    print(
+        "Policy: "
+        f"variant={POLICY_VARIANT}, "
+        f"role_aware={'on' if POLICY_ROLE_AWARE else 'off'}, "
+        f"decoy_guard={'on' if POLICY_DECOY_GUARD else 'off'}"
+    )
 
     # Run all tasks and collect scores
     results = {}
