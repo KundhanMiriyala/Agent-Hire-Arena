@@ -138,7 +138,7 @@ $env:OPENAI_API_KEY = "sk-..."
 python inference.py
 ```
 
-## Policy Variants (Hackathon-Safe)
+## Policy Variants
 
 Core environment behavior is unchanged. Policy improvements are opt-in and preserve baseline comparability.
 
