@@ -19,7 +19,7 @@ REWARD_INTERVIEW_UNCERTAIN = +0.05   # interview in uncertainty zone (resume 0.4
 REWARD_HIRE_INFORMED       = +0.10   # hire after interviewing
 PENALTY_HIRE_BLIND         = -0.05   # hire without interviewing
 PENALTY_BUDGET_EXHAUSTED   = -0.10   # budget runs out mid-episode
-REWARD_PROBE_SOFT_SIGNAL = +0.03 #for probe
+
 
 class HiringEnvironment:
     """
@@ -45,7 +45,6 @@ class HiringEnvironment:
             budget_remaining=config.budget,
             budget_total=config.budget,
             interviews_done={},
-            probes_done={},
             hires_made=[],
             skipped=[],
             step_rewards=[],
@@ -121,10 +120,10 @@ class HiringEnvironment:
 
         # ---- INTERVIEW ----------------------------------------------- #
         if action.action == "interview":
-            if cid in s.interviews_done or cid in getattr(s, 'probes_done', {}):
-                s.last_action_result = f"Error: {candidate.name} was already interviewed or probed."
+            if cid in s.interviews_done:
+                s.last_action_result = f"Error: {candidate.name} was already interviewed."
                 return self._build_observation(), HiringReward(
-                    step_reward=0.0, reason="Already interviewed or probed."
+                    step_reward=0.0, reason="Already interviewed."
                 )
             cost = 10.0
             if s.budget_remaining < cost:
@@ -156,42 +155,6 @@ class HiringEnvironment:
             s.last_action_result = (
                 f"Interviewed {candidate.name} ({cid}). "
                 f"Interview score: {interview_score:.3f}. "
-                f"Budget remaining: {s.budget_remaining:.0f}."
-            )
-        #----------------------------probe----------------------------#
-        elif action.action == "probe":
-            if cid in s.interviews_done or cid in s.probes_done:
-                s.last_action_result = (
-                    f"Error: {candidate.name} was already evaluated via interview/probe."
-                )
-                return self._build_observation(), HiringReward(
-                    step_reward=0.0, reason="Already probed/interviewed."
-                )
-
-            cost = 20.0
-            if s.budget_remaining < cost:
-                s.last_action_result = "Error: insufficient budget to probe."
-                return self._build_observation(), HiringReward(
-                    step_reward=0.0, reason="Insufficient budget."
-                )
-
-            s.budget_remaining -= cost
-
-            seed_bytes = hashlib.sha256(
-                f"{self._task_config.seed}-{cid}-probe".encode()
-            ).digest()
-            seed_int = int.from_bytes(seed_bytes[:4], "big") % (2 ** 31)
-            rng = np.random.default_rng(seed_int)
-            noise = float(rng.normal(0.0, 0.18))
-            soft_score = float(np.clip(candidate.true_skill + noise, 0.0, 1.0))
-
-            s.probes_done[cid] = round(soft_score, 3)
-            step_reward += REWARD_PROBE_SOFT_SIGNAL
-            reason_parts.append("bonus: probed soft-skill signal")
-
-            s.last_action_result = (
-                f"Probed {candidate.name} ({cid}). "
-                f"Soft-skill score: {soft_score:.3f}. "
                 f"Budget remaining: {s.budget_remaining:.0f}."
             )
 
@@ -230,7 +193,7 @@ class HiringEnvironment:
         else:
             s.last_action_result = (
                 f"Error: unknown action '{action.action}'. "
-                "Valid actions: interview, probe, hire, skip, finalize."
+                "Valid actions: interview, hire, skip, finalize."
             )
             return self._build_observation(), HiringReward(
                 step_reward=0.0, reason="Unknown action."
@@ -262,7 +225,6 @@ class HiringEnvironment:
             final_score=s.final_score if s.done else None,
             reason=reason,
         )
-    
 
     # ------------------------------------------------------------------ #
     #  state()                                                             #
@@ -277,7 +239,6 @@ class HiringEnvironment:
             "budget_remaining": s.budget_remaining,
             "budget_total": s.budget_total,
             "interviews_done": s.interviews_done,
-            "probes_done": s.probes_done,
             "hires_made": s.hires_made,
             "skipped": s.skipped,
             "step_rewards": s.step_rewards,
@@ -310,7 +271,6 @@ class HiringEnvironment:
             candidates=[c.to_agent_view() for c in s.candidates],
             budget_remaining=s.budget_remaining,
             interviews_done=s.interviews_done,
-            probes_done=s.probes_done,
             hires_made=s.hires_made,
             skipped=s.skipped,
             step_num=s.step_num,
