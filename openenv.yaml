@@ -66,6 +66,12 @@ action_space:
       cost: 50
       description: "Hires the candidate. Blind hire (without prior interview) incurs step penalty."
 
+    - name: probe
+      parameters:
+        candidate_id: string
+      cost: 20
+      description: "Probe for soft skill indicators. Medium-cost alternative to full interview."
+
     - name: skip
       parameters:
         candidate_id: string
