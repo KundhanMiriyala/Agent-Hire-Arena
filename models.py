@@ -34,7 +34,7 @@ class CandidateProfile(BaseModel):
 
 
 class HiringAction(BaseModel):
-    action: str                          # "interview" |"probe"| "hire" | "skip" | "finalize"
+    action: str                          # "interview" | "hire" | "skip" | "finalize"
     candidate_id: Optional[str] = None   # required for interview/hire/skip
 
 
@@ -42,7 +42,6 @@ class HiringObservation(BaseModel):
     candidates: List[dict]               # agent-view dicts (no hidden fields)
     budget_remaining: float
     interviews_done: Dict[str, float]    # candidate_id -> interview_score
-    probes_done: Dict[str, float]
     hires_made: List[str]                # candidate_ids
     skipped: List[str]                   # candidate_ids
     step_num: int
@@ -64,7 +63,6 @@ class HiringState(BaseModel):
     budget_remaining: float
     budget_total: float
     interviews_done: Dict[str, float]
-    probes_done: Dict[str, float]
     hires_made: List[str]
     skipped: List[str]
     step_rewards: List[float]
