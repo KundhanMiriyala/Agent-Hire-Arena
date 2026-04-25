@@ -15,6 +15,7 @@ class CandidateProfile(BaseModel):
     true_skill: float = Field(exclude=True)
     is_decoy: bool = Field(exclude=True, default=False)
     interview_difficulty: float = Field(exclude=True, default=1.0)
+    is_coached: bool = Field(exclude=True, default=False)
 
     class Config:
         # Allow the full object (with hidden fields) to exist in memory

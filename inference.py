@@ -97,7 +97,7 @@ API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:7860")
 MODEL_NAME   = os.environ.get("MODEL_NAME", "gpt-4o-mini")
 HF_TOKEN     = os.environ.get("HF_TOKEN", "")
 
-TASKS_TO_RUN = ["easy", "medium", "hard"]
+TASKS_TO_RUN = ["easy", "medium", "hard","adversarial","nightmare"]
 POLICY_VARIANT = os.environ.get("POLICY_VARIANT", "baseline").strip().lower()
 POLICY_ROLE_AWARE = os.environ.get("POLICY_ROLE_AWARE", "1").strip() != "0"
 POLICY_DECOY_GUARD = os.environ.get("POLICY_DECOY_GUARD", "1").strip() != "0"

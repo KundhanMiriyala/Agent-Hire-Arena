@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 from typing import Tuple
+import random
 
 import requests
 
@@ -245,6 +246,14 @@ class HiringEnvironment:
                 step_reward=0.0, reason="Unknown action."
             )
 
+        if (
+            self._task_config.adversarial
+            and s.step_num >= self._task_config.adversarial_start_step
+        ):
+            # s.last_action_result += " | NPC: You're hiring too slowly!"
+            s.last_action_result += f" | NPC: {self._npc_message(candidate)}"
+
+
         # ---- Check budget exhaustion --------------------------------- #
         if s.budget_remaining < 10.0 and not s.done:
             # Can't do anything useful — auto-end
@@ -395,3 +404,17 @@ class HiringEnvironment:
         except OSError:
             return ""
         return ""
+
+    def _npc_message(self, candidate: CandidateProfile | None = None) -> str:
+        path = os.path.join(os.path.dirname(__file__), "npc_message_bank.json")
+        with open(path, "r", encoding="utf-8") as f:
+            bank = json.load(f)
+
+        messages = [m for group in bank.values() for m in group]
+        msg = random.choice(messages)
+
+        return msg.format(
+            candidate_id=getattr(candidate, "candidate_id", "this candidate"),
+            candidate_name=getattr(candidate, "name", "this candidate"),
+        )
+

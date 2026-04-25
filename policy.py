@@ -11,6 +11,8 @@ ROLE_REQUIREMENTS: Dict[str, List[str]] = {
     "easy": ["ML Engineer"],
     "medium": ["ML Engineer", "Backend"],
     "hard": ["ML Engineer", "Backend", "Data Scientist"],
+    "adversarial": ["ML Engineer", "Backend", "Data Scientist"],
+    "nightmare": ["ML Engineer", "Backend", "Data Scientist"],
 }
 
 
@@ -60,6 +62,30 @@ BASELINE_CONFIGS: Dict[str, TaskPolicyConfig] = {
         min_budget_to_continue=60,
         hard_disagreement_gate=0.28,
         medium_disagreement_gate=0.35,
+    ),
+    "adversarial": TaskPolicyConfig(
+        target_interviews=7,
+        min_interview_coverage=0.65,
+        min_interviews_before_hire=7,
+        target_hires=2,
+        hire_interview_threshold=0.72,
+        finalize_best_score=0.76,
+        max_effective_interviews=8,
+        min_budget_to_continue=65,
+        hard_disagreement_gate=0.22,
+        medium_disagreement_gate=0.32,
+    ),
+    "nightmare": TaskPolicyConfig(
+        target_interviews=8,
+        min_interview_coverage=0.55,
+        min_interviews_before_hire=7,
+        target_hires=2,
+        hire_interview_threshold=0.74,
+        finalize_best_score=0.76,
+        max_effective_interviews=8,
+        min_budget_to_continue=60,
+        hard_disagreement_gate=0.20,
+        medium_disagreement_gate=0.32,
     ),
 }
 
