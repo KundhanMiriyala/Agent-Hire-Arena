@@ -44,8 +44,8 @@ class HiringEnvClient:
         Submit one action. Returns (observation, reward).
 
         Args:
-            action: One of "interview", "hire", "skip", "finalize"
-            candidate_id: Required for interview/hire/skip. None for finalize.
+            action: One of "interview", "probe", "hire", "skip", "finalize"
+            candidate_id: Required for interview/probe/hire/skip. None for finalize.
         """
         payload = {"action": action}
         if candidate_id:

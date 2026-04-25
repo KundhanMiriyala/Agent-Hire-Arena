@@ -58,7 +58,7 @@ class ResetRequest(BaseModel):
 
 
 class StepRequest(BaseModel):
-    action: str                          # "interview" | "hire" | "skip" | "finalize"
+    action: str                          # "interview" | "probe" | "hire" | "skip" | "finalize"
     candidate_id: Optional[str] = None
 
 
@@ -132,6 +132,9 @@ def list_tasks():
             "noise_level": cfg.noise_level,
             "budget": cfg.budget,
             "decoy_fraction": cfg.decoy_fraction,
+            "coached_fraction": cfg.coached_fraction,
+            "adversarial": cfg.adversarial,
+            "adversarial_start_step": cfg.adversarial_start_step,
             "max_steps": cfg.max_steps,
             "role_requirements": cfg.role_requirements,
             "description": cfg.description,

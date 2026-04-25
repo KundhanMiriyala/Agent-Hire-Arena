@@ -1,12 +1,14 @@
 from typing import Dict, Any
 
+from models import HiringAction
+
 
 def _render_observation(obs) -> str:
     if obs is None:
         return "No active episode. Click Reset."
     lines = []
     lines.append(f"Step: {obs.step_num} / {obs.max_steps}")
-    lines.append(f"Budget remaining: {obs.budget_remaining:.0f} (interview=10, hire=50)")
+    lines.append(f"Budget remaining: {obs.budget_remaining:.0f} (interview=10, probe=20, hire=50)")
     lines.append(f"Hired: {', '.join(obs.hires_made) if obs.hires_made else 'none'}")
     lines.append(f"Skipped: {', '.join(obs.skipped) if obs.skipped else 'none'}")
     lines.append("")
@@ -18,6 +20,11 @@ def _render_observation(obs) -> str:
         interview_str = ""
         if cid in obs.interviews_done:
             interview_str = f" | INTERVIEWED: {obs.interviews_done[cid]:.3f}"
+        if cid in obs.probes_done:
+            interview_str += (
+                f" | PROBED: {obs.probes_done[cid]:.3f}"
+                f" | gap={obs.probe_gaps.get(cid, 0.0):+.3f}"
+            )
         lines.append(
             f"{cid}: {c['name']} — resume={c['resume_score']:.2f} exp={c['years_experience']}yrs{interview_str}"
         )
@@ -57,7 +64,7 @@ def mount_ui(app, env):
 
         with gr.Row():
             candidate_dropdown = gr.Dropdown(choices=[], label="Candidate")
-            action_radio = gr.Radio(choices=["interview", "hire", "skip", "finalize"], value="interview", label="Action")
+            action_radio = gr.Radio(choices=["interview", "probe", "hire", "skip", "finalize"], value="interview", label="Action")
             step_btn = gr.Button("Step")
 
         metrics_md = gr.Markdown("")
@@ -74,7 +81,7 @@ def mount_ui(app, env):
             else:
                 cid = candidate_id
             try:
-                obs, reward = env.step(action=action, candidate_id=cid)
+                obs, reward = env.step(HiringAction(action=action, candidate_id=cid))
             except Exception as e:
                 return _render_observation(env._state), gr.update(choices=[]), f"Error: {e}"
             ids = [c["candidate_id"] for c in obs.candidates if c["candidate_id"] not in obs.hires_made and c["candidate_id"] not in obs.skipped]

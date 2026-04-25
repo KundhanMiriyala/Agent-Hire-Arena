@@ -1,6 +1,11 @@
 import numpy as np
 import hashlib
+import json
+import os
 from typing import Tuple
+import random
+
+import requests
 
 from models import (
     CandidateProfile,
@@ -19,6 +24,7 @@ REWARD_INTERVIEW_UNCERTAIN = +0.05   # interview in uncertainty zone (resume 0.4
 REWARD_HIRE_INFORMED       = +0.10   # hire after interviewing
 PENALTY_HIRE_BLIND         = -0.05   # hire without interviewing
 PENALTY_BUDGET_EXHAUSTED   = -0.10   # budget runs out mid-episode
+REWARD_PROBE_AUDIT         = +0.03   # probe after interview to audit coaching risk
 
 
 class HiringEnvironment:
@@ -45,6 +51,8 @@ class HiringEnvironment:
             budget_remaining=config.budget,
             budget_total=config.budget,
             interviews_done={},
+            probes_done={},
+            probe_gaps={},
             hires_made=[],
             skipped=[],
             step_rewards=[],
@@ -158,6 +166,45 @@ class HiringEnvironment:
                 f"Budget remaining: {s.budget_remaining:.0f}."
             )
 
+        # ---- PROBE --------------------------------------------------- #
+        elif action.action == "probe":
+            if cid not in s.interviews_done:
+                s.last_action_result = f"Error: {candidate.name} must be interviewed before probing."
+                return self._build_observation(), HiringReward(
+                    step_reward=0.0, reason="Must interview before probing."
+                )
+            if cid in s.probes_done:
+                s.last_action_result = f"Error: {candidate.name} was already probed."
+                return self._build_observation(), HiringReward(
+                    step_reward=0.0, reason="Already probed."
+                )
+
+            cost = 20.0
+            if s.budget_remaining < cost:
+                s.last_action_result = "Error: insufficient budget to probe."
+                return self._build_observation(), HiringReward(
+                    step_reward=0.0, reason="Insufficient budget."
+                )
+
+            s.budget_remaining -= cost
+
+            interview_score = float(s.interviews_done[cid])
+            probe_score, judge_note = self._probe_score(candidate, interview_score)
+            probe_gap = round(interview_score - probe_score, 3)
+            s.probes_done[cid] = round(probe_score, 3)
+            s.probe_gaps[cid] = probe_gap
+
+            step_reward += REWARD_PROBE_AUDIT
+            reason_parts.append("bonus: probed interviewed candidate")
+
+            s.last_action_result = (
+                f"Probed {candidate.name} ({cid}). "
+                f"Probe score: {probe_score:.3f}. "
+                f"Interview-probe gap: {probe_gap:+.3f}. "
+                f"{judge_note} "
+                f"Budget remaining: {s.budget_remaining:.0f}."
+            )
+
         # ---- HIRE ---------------------------------------------------- #
         elif action.action == "hire":
             cost = 50.0
@@ -193,11 +240,19 @@ class HiringEnvironment:
         else:
             s.last_action_result = (
                 f"Error: unknown action '{action.action}'. "
-                "Valid actions: interview, hire, skip, finalize."
+                "Valid actions: interview, probe, hire, skip, finalize."
             )
             return self._build_observation(), HiringReward(
                 step_reward=0.0, reason="Unknown action."
             )
+
+        if (
+            self._task_config.adversarial
+            and s.step_num >= self._task_config.adversarial_start_step
+        ):
+            # s.last_action_result += " | NPC: You're hiring too slowly!"
+            s.last_action_result += f" | NPC: {self._npc_message(candidate)}"
+
 
         # ---- Check budget exhaustion --------------------------------- #
         if s.budget_remaining < 10.0 and not s.done:
@@ -239,6 +294,8 @@ class HiringEnvironment:
             "budget_remaining": s.budget_remaining,
             "budget_total": s.budget_total,
             "interviews_done": s.interviews_done,
+            "probes_done": s.probes_done,
+            "probe_gaps": s.probe_gaps,
             "hires_made": s.hires_made,
             "skipped": s.skipped,
             "step_rewards": s.step_rewards,
@@ -271,6 +328,8 @@ class HiringEnvironment:
             candidates=[c.to_agent_view() for c in s.candidates],
             budget_remaining=s.budget_remaining,
             interviews_done=s.interviews_done,
+            probes_done=s.probes_done,
+            probe_gaps=s.probe_gaps,
             hires_made=s.hires_made,
             skipped=s.skipped,
             step_num=s.step_num,
@@ -284,3 +343,78 @@ class HiringEnvironment:
             if c.candidate_id == candidate_id:
                 return c
         return None
+
+    def _probe_score(self, candidate: CandidateProfile, interview_score: float) -> tuple[float, str]:
+        """Return a truth-aligned probe score, with optional HF/OpenAI judge support."""
+        fallback_score = float(np.clip(candidate.true_skill, 0.0, 1.0))
+        if os.environ.get("DISABLE_LIVE_PROBE_JUDGE") == "1":
+            return fallback_score, "Judge=fallback."
+
+        token = self._env_value("HF_TOKEN")
+        model = self._env_value("HF_MODEL_NAME") or self._env_value("MODEL_NAME")
+        if not token or not model:
+            return fallback_score, "Judge=fallback."
+
+        base_url = (self._env_value("HF_API_BASE_URL") or "https://router.huggingface.co/v1").rstrip("/")
+        url = f"{base_url}/chat/completions"
+        prompt = (
+            "You are judging a hiring benchmark probe. Return JSON only with "
+            'a numeric "probe_score" from 0 to 1 and a short "coaching_risk". '
+            "The probe score should reflect true ability, not interview coaching.\n"
+            f"Candidate role: {candidate.role}\n"
+            f"Resume score: {candidate.resume_score}\n"
+            f"Interview score: {interview_score:.3f}\n"
+            f"Ground-truth skill for judge calibration: {candidate.true_skill:.4f}\n"
+            f"Is decoy: {candidate.is_decoy}\n"
+        )
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 80,
+            "temperature": 0,
+        }
+        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=8)
+            response.raise_for_status()
+            content = response.json()["choices"][0]["message"]["content"]
+            data = json.loads(content)
+            score = float(data.get("probe_score", fallback_score))
+            risk = str(data.get("coaching_risk", "unknown"))[:80]
+            return float(np.clip(score, 0.0, 1.0)), f"Judge=llm risk={risk}."
+        except Exception:
+            return fallback_score, "Judge=fallback."
+
+    def _env_value(self, key: str) -> str:
+        value = os.environ.get(key, "").strip()
+        if value:
+            return value
+
+        env_path = os.path.join(os.getcwd(), ".env")
+        try:
+            with open(env_path, "r", encoding="utf-8") as handle:
+                for line in handle:
+                    raw = line.strip()
+                    if not raw or raw.startswith("#") or "=" not in raw:
+                        continue
+                    name, raw_value = raw.split("=", 1)
+                    if name.strip() == key:
+                        return raw_value.strip().strip('"').strip("'")
+        except OSError:
+            return ""
+        return ""
+
+    def _npc_message(self, candidate: CandidateProfile | None = None) -> str:
+        path = os.path.join(os.path.dirname(__file__), "npc_message_bank.json")
+        with open(path, "r", encoding="utf-8") as f:
+            bank = json.load(f)
+
+        messages = [m for group in bank.values() for m in group]
+        msg = random.choice(messages)
+
+        return msg.format(
+            candidate_id=getattr(candidate, "candidate_id", "this candidate"),
+            candidate_name=getattr(candidate, "name", "this candidate"),
+        )
+

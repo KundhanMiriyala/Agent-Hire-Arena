@@ -20,6 +20,7 @@ Run:
 import os
 import re
 import json
+import ast
 import time
 from typing import Optional
 import requests
@@ -96,7 +97,7 @@ API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:7860")
 MODEL_NAME   = os.environ.get("MODEL_NAME", "gpt-4o-mini")
 HF_TOKEN     = os.environ.get("HF_TOKEN", "")
 
-TASKS_TO_RUN = ["easy", "medium", "hard"]
+TASKS_TO_RUN = ["easy", "medium", "hard","adversarial","nightmare"]
 POLICY_VARIANT = os.environ.get("POLICY_VARIANT", "baseline").strip().lower()
 POLICY_ROLE_AWARE = os.environ.get("POLICY_ROLE_AWARE", "1").strip() != "0"
 POLICY_DECOY_GUARD = os.environ.get("POLICY_DECOY_GUARD", "1").strip() != "0"
@@ -134,8 +135,9 @@ def _resolve_env_base_url() -> str:
 
 SYSTEM_PROMPT = """You are an expert hiring manager making sequential decisions to assemble the best team within a strict budget.
 
-ACTIONS — respond with exactly one JSON object per turn:
+ACTIONS — respond with exactly one JSON object on the final line:
   {"action": "interview", "candidate_id": "C03"}   → costs 10 units, reveals interview_score
+  {"action": "probe",     "candidate_id": "C03"}   → costs 20 units, requires prior interview and audits coaching risk
   {"action": "hire",      "candidate_id": "C03"}   → costs 50 units, adds to your team
   {"action": "skip",      "candidate_id": "C03"}   → free, permanently rejects
   {"action": "finalize"}                            → ends episode, scores your team
@@ -144,6 +146,7 @@ RULES:
 - You MUST call finalize to receive your score. Forgetting = score of 0.
 - resume_score is noisy and unreliable — never hire based on it alone.
 - interview_score is more reliable but costs 10 units.
+- probe must come after interview. It reveals a more truth-aligned score and gap.
 - Hiring without interviewing is allowed but risky (blind hire).
 - On hard tasks, some candidates have impressive resumes but very low true skill. Be skeptical.
 - Once you skip a candidate, that decision is permanent.
@@ -152,11 +155,14 @@ RULES:
 STRATEGY:
 1. Scan all resumes first.
 2. Interview candidates in the uncertain range (resume 0.4-0.75) where you need more signal.
-3. Hire candidates with strong interview scores.
-4. Skip clearly weak candidates to clear mental space.
-5. Finalize when your team looks solid or budget is running low.
+3. Probe already-interviewed candidates when the interview may be coaching-inflated.
+4. Hire candidates with strong interview/probe evidence.
+5. Skip clearly weak candidates to clear mental space.
+6. Finalize when your team looks solid or budget is running low.
 
-Think step by step. Reason about: budget remaining, how many more hires you can afford, which candidates are worth interviewing vs skipping. Then output your JSON action on the final line.
+Think step by step briefly, then output exactly one valid JSON object on the final line.
+Use double quotes only. Use the key "candidate_id", not "candidate" or "id".
+Do not wrap the JSON in Markdown.
 """
 
 
@@ -169,7 +175,7 @@ def render_observation(obs: HiringObservation) -> str:
         f"=== HIRING DASHBOARD ===",
         f"Step: {obs.step_num} / {obs.max_steps}",
         f"Budget remaining: {obs.budget_remaining:.0f} units  "
-        f"(interview=10, hire=50)",
+        f"(interview=10, probe=20, hire=50)",
         f"Hired so far: {obs.hires_made if obs.hires_made else 'none'}",
         f"Skipped: {obs.skipped if obs.skipped else 'none'}",
         "",
@@ -191,6 +197,10 @@ def render_observation(obs: HiringObservation) -> str:
             confidence = _confidence_score(c["resume_score"], score)
             disagreement = _signal_disagreement(c["resume_score"], score)
             interview_str = f" | INTERVIEWED: {score:.3f} | conf={confidence:.2f} | disagree={disagreement:.2f}"
+        if cid in obs.probes_done:
+            probe_score = obs.probes_done[cid]
+            gap = obs.probe_gaps.get(cid, 0.0)
+            interview_str += f" | PROBED: {probe_score:.3f} | gap={gap:+.3f}"
 
         lines.append(
             f"  {cid}: {c['name']:<10} "
@@ -207,6 +217,7 @@ def render_observation(obs: HiringObservation) -> str:
     lines.append(
         f"\nBudget math: you can afford "
         f"{int(obs.budget_remaining // 10)} more interviews OR "
+        f"{int(obs.budget_remaining // 20)} more probes OR "
         f"{int(obs.budget_remaining // 50)} more hires."
     )
 
@@ -217,7 +228,7 @@ def render_observation(obs: HiringObservation) -> str:
 #  Action parser — robust, never crashes the loop                      #
 # ------------------------------------------------------------------ #
 
-VALID_ACTIONS = {"interview", "hire", "skip", "finalize"}
+VALID_ACTIONS = {"interview", "probe", "hire", "skip", "finalize"}
 
 
 def parse_action(text: str) -> Optional[dict]:
@@ -226,24 +237,62 @@ def parse_action(text: str) -> Optional[dict]:
     Searches for the last valid JSON object containing an 'action' key.
     Falls back to finalize if nothing parseable is found.
     """
-    # Try direct parse first for strict-JSON responses
-    try:
-        obj = json.loads(text.strip())
-        if isinstance(obj, dict) and obj.get("action") in VALID_ACTIONS:
-            return obj
-    except Exception:
-        pass
+    def normalize_action(obj: object) -> Optional[dict]:
+        if not isinstance(obj, dict):
+            return None
+
+        action = str(obj.get("action", "")).strip().lower()
+        if action not in VALID_ACTIONS:
+            return None
+        if action == "finalize":
+            return {"action": "finalize"}
+
+        cid = (
+            obj.get("candidate_id")
+            or obj.get("candidate")
+            or obj.get("candidateId")
+            or obj.get("id")
+        )
+        if not cid:
+            return None
+        return {"action": action, "candidate_id": str(cid).strip()}
+
+    def parse_object(raw: str) -> Optional[dict]:
+        try:
+            return normalize_action(json.loads(raw.strip()))
+        except Exception:
+            pass
+
+        # Some models produce Python-ish dicts with single quotes.
+        try:
+            return normalize_action(ast.literal_eval(raw.strip()))
+        except Exception:
+            return None
+
+    parsed = parse_object(text)
+    if parsed:
+        return parsed
 
     # Find all JSON-like blocks in the response
     matches = re.findall(r'\{[^{}]+\}', text, re.DOTALL)
 
     for raw in reversed(matches):   # last match = most likely the action
-        try:
-            obj = json.loads(raw)
-            if isinstance(obj, dict) and obj.get("action") in VALID_ACTIONS:
-                return obj
-        except json.JSONDecodeError:
-            continue
+        parsed = parse_object(raw)
+        if parsed:
+            return parsed
+
+    lowered = text.lower()
+    action_match = re.search(r'\b(interview|probe|hire|skip|finalize)\b', lowered)
+    if not action_match:
+        return None
+    action = action_match.group(1)
+    if action == "finalize":
+        return {"action": "finalize"}
+
+    cid_match = re.search(r'\bC\d{1,3}\b', text, re.IGNORECASE)
+    if not cid_match:
+        return None
+    return {"action": action, "candidate_id": cid_match.group(0).upper()}
 
     return None
 
@@ -427,6 +476,10 @@ def _sanitize_model_action(model_action: Optional[dict], obs: HiringObservation)
         return None
 
     if action == "interview" and cid in (obs.interviews_done or {}):
+        return None
+    if action == "probe" and (
+        cid not in (obs.interviews_done or {}) or cid in (obs.probes_done or {})
+    ):
         return None
 
     return {"action": action, "candidate_id": cid}

@@ -43,11 +43,15 @@ def generate_candidates(task_config: TaskConfig) -> List[CandidateProfile]:
     num_decoys = int(n * task_config.decoy_fraction)
     decoy_indices = set(rng.choice(n, size=num_decoys, replace=False).tolist())
 
+    num_coached = int(n * task_config.coached_fraction)
+    coached_indices = set(rng.choice(list(decoy_indices), size=min(num_coached, len(decoy_indices)), replace=False))
+
     candidates = []
     for i in range(n):
         candidate_id = f"C{i+1:02d}"
         name = FIRST_NAMES[name_indices[i]]
         is_decoy = i in decoy_indices
+        is_coached = i in coached_indices
         role = ROLES[int(rng.integers(0, len(ROLES)))]
         interview_difficulty = float(rng.uniform(0.8, 1.2))
 
