@@ -19,12 +19,13 @@ def plot_gullibility_collapse() -> None:
         "Adversarial\n(+ Angry Boss)",
         "Nightmare\n(Max Pressure)",
     ]
-    y = [0.9576, 0.9163, 0.6938, 0.5715, 0.0000]
+    # Baseline-from-run scores parsed from terminal output (before training).
+    y = [0.9466, 0.6263, 0.6883, 0.4452, 0.2110]
     x = np.arange(len(x_labels))
 
     fig, ax = plt.subplots(figsize=(10, 6), dpi=150)
     ax.set_title(
-        "AgentHire Arena: The Baseline Sycophancy Collapse",
+        "AgentHire Arena: Baselines-Before Training Collapse",
         fontsize=16,
         fontweight="bold",
         pad=14,
@@ -37,7 +38,7 @@ def plot_gullibility_collapse() -> None:
         linewidth=4,
         marker="o",
         markersize=10,
-        label="Baseline AI (GPT-4o / Gemma)",
+        label="Baselines-Before Training (Gemma-4-26B)",
     )
     ax.fill_between(x, y, 0, color="#ef4444", alpha=0.1)
 
@@ -48,9 +49,9 @@ def plot_gullibility_collapse() -> None:
     ax.set_xlim(-0.2, len(x_labels) - 0.8)
 
     ax.annotate(
-        "Sycophancy Trap:\nAI caves to NPC pressure\nand hires decoys.",
-        xy=(3, 0.5715),
-        xytext=(2.1, 0.32),
+        "Constraint failure zone:\nAdversarial pressure + role constraints\ncut score sharply.",
+        xy=(3, 0.4452),
+        xytext=(2.15, 0.36),
         textcoords="data",
         arrowprops=dict(arrowstyle="->", color="#b91c1c", lw=2),
         fontsize=10,
@@ -60,9 +61,9 @@ def plot_gullibility_collapse() -> None:
     )
 
     ax.annotate(
-        "Analysis Paralysis:\nAI panics, burns budget\non interviews, scores 0.",
-        xy=(4, 0.0),
-        xytext=(3.1, 0.18),
+        "Nightmare knapsack trap:\nBudget/role constraints force\na low terminal score.",
+        xy=(4, 0.2110),
+        xytext=(3.15, 0.24),
         textcoords="data",
         arrowprops=dict(arrowstyle="->", color="#b91c1c", lw=2),
         fontsize=10,
@@ -74,17 +75,24 @@ def plot_gullibility_collapse() -> None:
     ax.legend(loc="upper right", frameon=True, shadow=True)
     ax.grid(True, alpha=0.25)
     fig.tight_layout()
-    fig.savefig(os.path.join(OUTPUT_DIR, "gullibility_collapse_curve.png"), dpi=150)
+    fig.savefig(
+        os.path.join(
+            OUTPUT_DIR,
+            "baselines_before_training_gullibility_collapse_curve.png",
+        ),
+        dpi=150,
+    )
     plt.close(fig)
 
 
 def plot_analysis_paralysis() -> None:
-    steps = list(range(1, 20))
-    budget = [180, 170, 160, 150, 140, 130, 120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0]
+    # Nightmare baseline trajectory from the latest inference terminal log.
+    steps = list(range(1, 15))
+    budget = [170, 170, 170, 160, 150, 120, 70, 70, 60, 60, 50, 40, 30, 30]
 
     fig, ax = plt.subplots(figsize=(10, 6), dpi=150)
     ax.set_title(
-        "Nightmare Trajectory: AI Analysis Paralysis",
+        "Nightmare Trajectory: Baselines-Before Training",
         fontsize=16,
         fontweight="bold",
         pad=14,
@@ -105,13 +113,13 @@ def plot_analysis_paralysis() -> None:
     ax.set_xlabel("Episode Step Number", fontsize=12, fontweight="bold")
     ax.set_ylabel("Budget Remaining (Units)", fontsize=12, fontweight="bold")
     ax.set_ylim(-5, 190)
-    ax.set_xlim(1, 19)
+    ax.set_xlim(1, 14)
     ax.set_xticks(steps)
 
     ax.annotate(
         "Point of No Return:\nAgent can no longer\nafford to hire anyone.",
-        xy=(14, 50),
-        xytext=(8, 80),
+        xy=(11, 50),
+        xytext=(7.2, 88),
         textcoords="data",
         arrowprops=dict(arrowstyle="->", color="#991b1b", lw=2),
         fontsize=10,
@@ -121,9 +129,9 @@ def plot_analysis_paralysis() -> None:
     )
 
     ax.annotate(
-        "Episode Ends:\nBankrupt (Score: 0)",
-        xy=(19, 0),
-        xytext=(13.2, 20),
+        "Episode Ends:\nFinal score = 0.2110",
+        xy=(14, 30),
+        xytext=(10.4, 24),
         textcoords="data",
         arrowprops=dict(arrowstyle="->", color="#1e3a8a", lw=2),
         fontsize=10,
@@ -135,7 +143,13 @@ def plot_analysis_paralysis() -> None:
     ax.legend(loc="upper right", frameon=True)
     ax.grid(True, alpha=0.25)
     fig.tight_layout()
-    fig.savefig(os.path.join(OUTPUT_DIR, "analysis_paralysis_trajectory.png"), dpi=150)
+    fig.savefig(
+        os.path.join(
+            OUTPUT_DIR,
+            "baselines_before_training_analysis_paralysis_trajectory.png",
+        ),
+        dpi=150,
+    )
     plt.close(fig)
 
 
