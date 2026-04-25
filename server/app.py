@@ -58,7 +58,7 @@ class ResetRequest(BaseModel):
 
 
 class StepRequest(BaseModel):
-    action: str                          # "interview" | "hire" | "skip" | "finalize"
+    action: str                          # "interview" | "probe" | "hire" | "skip" | "finalize"
     candidate_id: Optional[str] = None
 
 

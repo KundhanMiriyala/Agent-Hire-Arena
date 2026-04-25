@@ -60,6 +60,12 @@ action_space:
       cost: 10
       description: "Reveals interview_score for the candidate. Can only be done once per candidate."
 
+    - name: probe
+      parameters:
+        candidate_id: string
+      cost: 20
+      description: "Requires a prior interview. Reveals a truth-aligned probe_score and interview-probe gap for coaching detection."
+
     - name: hire
       parameters:
         candidate_id: string
@@ -91,6 +97,14 @@ observation_space:
       type: "Dict[str, float]"
       description: "Maps candidate_id to interview_score for already-interviewed candidates."
 
+    - name: probes_done
+      type: "Dict[str, float]"
+      description: "Maps candidate_id to truth-aligned probe_score for already-probed candidates."
+
+    - name: probe_gaps
+      type: "Dict[str, float]"
+      description: "Maps candidate_id to interview_score minus probe_score for coaching-risk comparison."
+
     - name: hires_made
       type: List[str]
       description: "List of hired candidate_ids."
@@ -119,6 +133,8 @@ reward:
   step_level:
     - event: "interview candidate in uncertain zone (resume 0.4-0.75)"
       value: +0.05
+    - event: "probe after interview"
+      value: +0.03
     - event: "hire after interviewing"
       value: +0.10
     - event: "blind hire (hire without interview)"

@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from models import HiringObservation
 
-VALID_ACTIONS = {"interview", "hire", "skip", "finalize"}
+VALID_ACTIONS = {"interview", "probe", "hire", "skip", "finalize"}
 
 ROLE_REQUIREMENTS: Dict[str, List[str]] = {
     "easy": ["ML Engineer"],
@@ -140,6 +140,7 @@ class DecisionCore:
         self.features = features
 
         self.interviewed = obs.interviews_done or {}
+        self.probed = obs.probes_done or {}
         self.remaining: List[dict] = [
             c
             for c in obs.candidates
@@ -155,6 +156,9 @@ class DecisionCore:
 
     def can_interview(self) -> bool:
         return self.obs.budget_remaining >= 10
+
+    def can_probe(self) -> bool:
+        return self.obs.budget_remaining >= 20
 
     def can_hire(self) -> bool:
         return self.obs.budget_remaining >= 50
@@ -217,6 +221,20 @@ class DecisionCore:
             threshold -= 0.02
         return interview_score >= threshold
 
+    def should_probe(self, candidate: dict, interview_score: Optional[float]) -> bool:
+        cid = candidate["candidate_id"]
+        if interview_score is None or cid in self.probed or not self.can_probe():
+            return False
+        if self.obs.budget_remaining < 70:
+            return False
+
+        resume = float(candidate.get("resume_score", 0.0))
+        resume_gap = abs(resume - interview_score)
+        high_interview = interview_score >= 0.78
+        suspicious_resume = resume >= 0.84 and interview_score >= 0.60
+        mismatch = resume_gap >= (0.22 if self.task == "hard" else 0.30)
+        return high_interview or suspicious_resume or mismatch
+
     def should_finalize(self, best_score: float, interviews_done: int, hires_count: int) -> bool:
         if interviews_done < self.min_interviews_needed():
             return False
@@ -252,6 +270,18 @@ class DecisionCore:
         candidates.sort(key=lambda c: self.interview_value(c), reverse=True)
         return candidates
 
+    def ranked_probe_candidates(self) -> List[Tuple[str, float, float]]:
+        ranked: List[Tuple[str, float, float]] = []
+        for cid, score in self.interviewed.items():
+            candidate = self.by_id.get(cid)
+            if candidate is None or not self.should_probe(candidate, score):
+                continue
+            resume_gap = abs(float(candidate.get("resume_score", 0.0)) - score)
+            priority = score + resume_gap + self.role_bonus(candidate)
+            ranked.append((cid, priority, score))
+        ranked.sort(key=lambda x: x[1], reverse=True)
+        return ranked
+
 
 def _sanitize_model_action(model_action: Optional[dict], obs: HiringObservation) -> Optional[dict]:
     if not model_action:
@@ -275,6 +305,10 @@ def _sanitize_model_action(model_action: Optional[dict], obs: HiringObservation)
         return None
 
     if action == "interview" and cid in (obs.interviews_done or {}):
+        return None
+    if action == "probe" and (
+        cid not in (obs.interviews_done or {}) or cid in (obs.probes_done or {})
+    ):
         return None
 
     return {"action": action, "candidate_id": cid}
@@ -305,6 +339,16 @@ def _simulate_utility(core: DecisionCore, action: dict) -> float:
         info_gain = 0.30 if 0.45 <= resume <= 0.80 else 0.12
         return info_gain - 0.06 + 0.15 * (1.0 - disagreement) - 0.02 * interviewed_count
 
+    if action_type == "probe":
+        cid = action["candidate_id"]
+        candidate = core.by_id.get(cid)
+        interview = core.interviewed.get(cid)
+        if candidate is None or not core.should_probe(candidate, interview):
+            return -1.0
+        resume = float(candidate.get("resume_score", 0.0))
+        resume_gap = abs(resume - float(interview))
+        return 0.18 + resume_gap + (0.10 if float(interview) >= 0.78 else 0.0) + core.role_bonus(candidate)
+
     if action_type == "hire":
         cid = action["candidate_id"]
         candidate = core.by_id.get(cid)
@@ -332,6 +376,17 @@ def _simulate_utility(core: DecisionCore, action: dict) -> float:
 def _planning_action(core: DecisionCore, safe_model_action: Optional[dict]) -> dict:
     interviewed_ranked = core.ranked_interviewed()
     uninterviewed_ranked = core.ranked_uninterviewed()
+    probe_ranked = core.ranked_probe_candidates()
+
+    if core.can_probe() and probe_ranked:
+        cid, _, _ = probe_ranked[0]
+        return {"action": "probe", "candidate_id": cid}
+
+    if core.can_hire() and len(core.interviewed) >= core.min_interviews_needed():
+        for cid, _, interview_score in interviewed_ranked:
+            candidate = core.by_id.get(cid)
+            if candidate and core.should_hire(candidate, interview_score):
+                return {"action": "hire", "candidate_id": cid}
 
     action_pool: List[dict] = [{"action": "finalize"}]
 
@@ -342,6 +397,10 @@ def _planning_action(core: DecisionCore, safe_model_action: Optional[dict]) -> d
     if core.can_hire():
         for cid, _, _ in interviewed_ranked[:2]:
             action_pool.append({"action": "hire", "candidate_id": cid})
+
+    if core.can_probe():
+        for cid, _, _ in probe_ranked[:2]:
+            action_pool.append({"action": "probe", "candidate_id": cid})
 
     for c in core.remaining[:1]:
         action_pool.append({"action": "skip", "candidate_id": c["candidate_id"]})
@@ -372,6 +431,7 @@ def _greedy_action(core: DecisionCore, safe_model_action: Optional[dict]) -> dic
 
     interviewed_ranked = core.ranked_interviewed()
     uninterviewed_ranked = core.ranked_uninterviewed()
+    probe_ranked = core.ranked_probe_candidates()
 
     best_candidate_id = None
     best_candidate_score = -1.0
@@ -403,6 +463,16 @@ def _greedy_action(core: DecisionCore, safe_model_action: Optional[dict]) -> dic
 
     if core.can_interview() and interviews_done < min_interviews_needed and uninterviewed_ranked:
         return {"action": "interview", "candidate_id": uninterviewed_ranked[0]["candidate_id"]}
+
+    if safe_model_action and safe_model_action.get("action") == "probe" and core.can_probe():
+        cid = safe_model_action.get("candidate_id")
+        candidate = core.by_id.get(cid)
+        if candidate and core.should_probe(candidate, core.interviewed.get(cid)):
+            return safe_model_action
+
+    if core.can_probe() and probe_ranked:
+        cid, _, _ = probe_ranked[0]
+        return {"action": "probe", "candidate_id": cid}
 
     if core.can_hire() and best_candidate_id and interviews_done >= min_interviews_needed:
         best_candidate = core.by_id.get(best_candidate_id)

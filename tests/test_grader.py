@@ -13,6 +13,8 @@ def make_state_with_hires(candidates, hires_made, budget_total, budget_remaining
         budget_total=budget_total,
         step_rewards=[],
         interviews_done={},
+        probes_done={},
+        probe_gaps={},
         hires_made=hires_made,
         skipped=[],
         step_num=0,
