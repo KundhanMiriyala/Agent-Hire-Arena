@@ -95,6 +95,7 @@ def generate_candidates(task_config: TaskConfig) -> List[CandidateProfile]:
                 skills=skills,
                 true_skill=round(true_skill, 4),
                 is_decoy=is_decoy,
+                is_coached=is_coached,
                 interview_difficulty=round(interview_difficulty, 3),
             )
         )

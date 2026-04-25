@@ -39,26 +39,43 @@ def grade(state: HiringState, task_config: TaskConfig) -> float:
     team_size_bonus = min(len(hired_profiles) / 3.0, 1.0) * 0.25
     cost_penalty = (cost_ratio ** 1.3) * 0.40
 
+    # --- 1. Dynamic Decoy Penalty ---
+    base_decoy_weight = 0.25
+    if task_config.name == "adversarial":
+        base_decoy_weight = 0.45
+    elif task_config.name == "nightmare":
+        base_decoy_weight = 0.65  # Punish blind decoy hires severely
+
     decoy_hires = sum(1 for c in hired_profiles if c.is_decoy)
     decoy_ratio = decoy_hires / len(hired_profiles) if hired_profiles else 0.0
-    decoy_penalty = 0.25 * decoy_ratio
+    decoy_penalty = base_decoy_weight * decoy_ratio
 
+    # --- 2. Strict Role Coverage & Penalties ---
     req = task_config.role_requirements or {}
+    role_coverage_bonus = 0.0
+    role_penalty = 0.0
     if req:
         hired_roles = {c.role for c in hired_profiles}
         covered = sum(1 for role in req if role in hired_roles)
         role_coverage_bonus = 0.20 * (covered / len(req))
-    else:
-        role_coverage_bonus = 0.0
 
-    score = avg_true_skill + team_size_bonus + role_coverage_bonus - cost_penalty - decoy_penalty
+        # Zero-shot LLMs forget constraints. Punish them severely on the hardest tasks.
+        if task_config.name == "adversarial":
+            missing_roles = len(req) - covered
+            role_penalty = 0.15 * missing_roles
+        elif task_config.name == "nightmare":
+            missing_roles = len(req) - covered
+            role_penalty = 0.25 * missing_roles  # Brutal 25% penalty per missing role
 
-    # Anti-gaming: very early finalize receives a soft multiplier.
-    if state.step_num < 3:
-        score *= 0.70
+    # --- 3. Final Score Calculation ---
+    raw_score = avg_true_skill + team_size_bonus + role_coverage_bonus - cost_penalty - decoy_penalty - role_penalty
+
+    # Anti-gaming multiplier
+    early_finalize_multiplier = 0.70 if state.step_num < 3 else 1.0
+    raw_score *= early_finalize_multiplier
 
     # Clip to [0.0, 1.0]
-    return float(max(0.0, min(1.0, score)))
+    return float(max(0.0, min(1.0, raw_score)))
 
 
 def explain_grade(state: HiringState, task_config: TaskConfig) -> dict:

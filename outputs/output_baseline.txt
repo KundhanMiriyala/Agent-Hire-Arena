@@ -1,0 +1,781 @@
+
+============================================================
+  TASK: EASY
+============================================================
+[START] task=easy env=AgentHire-Arena model=google/gemma-4-26B-A4B-it
+
+[Step 1]
+  Reasoning: Reasoning: All candidates have relatively high resume scores; I will start by interviewing C01 to get a reliable signal.
+  Model action:  {"action":"interview","candidate_id":"C01"}
+  Safe action:   {"action":"interview","candidate_id":"C01"}
+  Final action:  {"action": "interview", "candidate_id": "C01"}
+  Decision:      Executed model action directly.
+  Reward:    +0.00  (interview)
+  Result:    Interviewed Uma (C01). Interview score: 0.808. Budget remaining: 290.
+[STEP]  step=1 action={"action": "interview", "candidate_id": "C01"} reward=0.00 done=false error=interview
+
+[Step 2]
+  Reasoning: Reasoning: Uma (C01) has a high interview score (0.808) and high confidence; I will hire her to secure a strong lead.
+  Model action:  {"action":"hire","candidate_id":"C01"}
+  Safe action:   {"action":"hire","candidate_id":"C01"}
+  Final action:  {"action": "hire", "candidate_id": "C01"}
+  Decision:      Executed model action directly.
+  Reward:    +120.00  (bonus: strong evidence hire; bonus: covered missing required role)
+  Result:    Hired Uma (C01) — evidence-aware hire. Budget remaining: 240.
+[STEP]  step=2 action={"action": "hire", "candidate_id": "C01"} reward=120.00 done=false error=bonus: strong evidence hire; bonus: covered missing required role
+
+[Step 3]
+  Reasoning: Reasoning: Mia (C02) has a high resume score (0.85), so I must probe her to ensure her high score isn't coached before hiring.
+  Model action:  {"action":"probe","candidate_id":"C02"}
+  Safe action:   {"action":"probe","candidate_id":"C02"}
+  Final action:  {"action": "probe", "candidate_id": "C02"}
+  Decision:      Executed model action directly.
+  Reward:    -20.00  (Must interview before probing.)
+  Result:    Error: must interview Mia before probing.
+[STEP]  step=3 action={"action": "probe", "candidate_id": "C02"} reward=-20.00 done=false error=Must interview before probing.
+
+[Step 4]
+  Reasoning: Reasoning: Mia (C02) has a high resume score (0.85), so I must interview her first to get a reliable signal before deciding to probe or hire.
+  Model action:  {"action":"interview","candidate_id":"C02"}
+  Safe action:   {"action":"interview","candidate_id":"C02"}
+  Final action:  {"action": "interview", "candidate_id": "C02"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Mia (C02). Interview score: 0.662. Budget remaining: 230.
+[STEP]  step=4 action={"action": "interview", "candidate_id": "C02"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 5]
+  Reasoning: Reasoning: Mia (C02) has a high resume (0.85) but a mediocre interview (0.662); since the interview is more reliable, I will skip her to save budget for better candidates.
+  Model action:  {"action":"skip","candidate_id":"C02"}
+  Safe action:   {"action":"skip","candidate_id":"C02"}
+  Final action:  {"action": "skip", "candidate_id": "C02"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Skipped Mia (C02). No cost.
+[STEP]  step=5 action={"action": "skip", "candidate_id": "C02"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 6]
+  Reasoning: Reasoning: Sam (C03) has a solid resume score (0.75) and needs an interview to confirm skill level.
+  Model action:  {"action":"interview","candidate_id":"C03"}
+  Safe action:   {"action":"interview","candidate_id":"C03"}
+  Final action:  {"action": "interview", "candidate_id": "C03"}
+  Decision:      Executed model action directly.
+  Reward:    +35.00  (bonus: interviewed uncertain candidate; penalty: step drift)
+  Result:    Interviewed Sam (C03). Interview score: 0.722. Budget remaining: 220.
+[STEP]  step=6 action={"action": "interview", "candidate_id": "C03"} reward=35.00 done=false error=bonus: interviewed uncertain candidate; penalty: step drift        
+
+[Step 7]
+  Reasoning: Reasoning: Sam (C03) has a consistent interview score (0.722) matching his resume (0.75), making him a reliable hire.
+  Model action:  {"action":"hire","candidate_id":"C03"}
+  Safe action:   {"action":"hire","candidate_id":"C03"}
+  Final action:  {"action": "hire", "candidate_id": "C03"}
+  Decision:      Executed model action directly.
+  Reward:    +75.00  (bonus: strong evidence hire; penalty: step drift)
+  Result:    Hired Sam (C03) — evidence-aware hire. Budget remaining: 170.
+[STEP]  step=7 action={"action": "hire", "candidate_id": "C03"} reward=75.00 done=false error=bonus: strong evidence hire; penalty: step drift
+
+[Step 8]
+  Reasoning: Reasoning: Carol (C04) has a high resume score (0.83) and is worth interviewing to confirm her skill level.
+  Model action:  {"action":"interview","candidate_id":"C04"}
+  Safe action:   {"action":"interview","candidate_id":"C04"}
+  Final action:  {"action": "interview", "candidate_id": "C04"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Carol (C04). Interview score: 0.712. Budget remaining: 160.
+[STEP]  step=8 action={"action": "interview", "candidate_id": "C04"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 9]
+  Reasoning: Reasoning: Carol (C04) has a high resume score but a lower interview score (0.712), suggesting she might be coached or just mediocre; however, Diana (C05) is a low-signal candidate. I will probe Carol...
+  Model action:  {"action":"probe","candidate_id":"C04"}
+  Safe action:   {"action":"probe","candidate_id":"C04"}
+  Final action:  {"action": "probe", "candidate_id": "C04"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (probe gap=-0.07; penalty: step drift)
+  Result:    Probed Carol (C04). Score: 0.785. (interview=0.712, gap=-0.07). Budget remaining: 140.
+[STEP]  step=9 action={"action": "probe", "candidate_id": "C04"} reward=-5.00 done=false error=probe gap=-0.07; penalty: step drift
+
+[Step 10]
+  Reasoning: Reasoning: Carol (C04) has a strong probe score (0.785) that aligns well with her resume and interview, making her a high-quality candidate.
+  Model action:  {"action":"hire","candidate_id":"C04"}
+  Safe action:   {"action":"hire","candidate_id":"C04"}
+  Final action:  {"action": "hire", "candidate_id": "C04"}
+  Decision:      Executed model action directly.
+  Reward:    +75.00  (bonus: strong evidence hire; penalty: step drift)
+  Result:    Hired Carol (C04) — evidence-aware hire. Budget remaining: 90.
+[STEP]  step=10 action={"action": "hire", "candidate_id": "C04"} reward=75.00 done=false error=bonus: strong evidence hire; penalty: step drift
+
+[Step 11]
+  Reasoning: Reasoning: Diana (C05) has a low resume score (0.44), so I need an interview to see if she is worth the high cost of hiring.
+  Model action:  {"action":"interview","candidate_id":"C05"}
+  Safe action:   {"action":"interview","candidate_id":"C05"}
+  Final action:  {"action": "interview", "candidate_id": "C05"}
+  Decision:      Executed model action directly.
+  Reward:    +35.00  (bonus: interviewed uncertain candidate; penalty: step drift)
+  Result:    Interviewed Diana (C05). Interview score: 0.426. Budget remaining: 80.
+[STEP]  step=11 action={"action": "interview", "candidate_id": "C05"} reward=35.00 done=false error=bonus: interviewed uncertain candidate; penalty: step drift       
+
+[Step 12]
+  Reasoning: Reasoning: Diana (C05) has a low resume score (0.44) and a low interview score (0.426), indicating she is not a strong candidate. Since she is the last candidate and the current team is already establ...
+  Model action:  {"action":"finalize"}
+  Safe action:   {"action":"finalize"}
+  Final action:  {"action": "finalize"}
+  Decision:      Executed model action directly.
+  Reward:    +0.95  (Finalized. Score=0.9466)
+  Result:    Episode finalized. Final score: 0.9466. Avg true skill: 0.764. Cost ratio: 0.733.
+[STEP]  step=12 action={"action": "finalize"} reward=0.95 done=true error=Finalized. Score=0.9466
+
+  FINAL SCORE [easy]: 0.9466
+[END]   success=true steps=12 score=0.95 rewards=0.00,120.00,-20.00,-5.00,-5.00,35.00,75.00,-5.00,-5.00,75.00,35.00,0.95
+
+============================================================
+  TASK: MEDIUM
+============================================================
+[START] task=medium env=AgentHire-Arena model=google/gemma-4-26B-A4B-it
+
+[Step 1]
+  Reasoning: Reasoning: I will start by interviewing Victor (C02) to get a better signal on his moderate resume score.
+  Model action:  {"action":"interview","candidate_id":"C02"}
+  Safe action:   {"action":"interview","candidate_id":"C02"}
+  Final action:  {"action": "interview", "candidate_id": "C02"}
+  Decision:      Executed model action directly.
+  Reward:    +40.00  (bonus: interviewed uncertain candidate)
+  Result:    Interviewed Victor (C02). Interview score: 0.370. Budget remaining: 170.
+[STEP]  step=1 action={"action": "interview", "candidate_id": "C02"} reward=40.00 done=false error=bonus: interviewed uncertain candidate
+
+[Step 2]
+  Reasoning: Reasoning: Victor (C02) has a low interview score (0.370) compared to his resume (0.57), so I will skip him and move to Olivia (C03) who has a high resume score.
+  Model action:  {"action":"skip","candidate_id":"C02"}
+  Safe action:   {"action":"skip","candidate_id":"C02"}
+  Final action:  {"action": "skip", "candidate_id": "C02"}
+  Decision:      Executed model action directly.
+  Reward:    +0.00  (skip)
+  Result:    Skipped Victor (C02). No cost.
+[STEP]  step=2 action={"action": "skip", "candidate_id": "C02"} reward=0.00 done=false error=skip
+
+[Step 3]
+  Reasoning: Reasoning: Olivia (C03) has a very high resume score (0.90), so I must interview her to get a reliable signal.
+  Model action:  {"action":"interview","candidate_id":"C03"}
+  Safe action:   {"action":"interview","candidate_id":"C03"}
+  Final action:  {"action": "interview", "candidate_id": "C03"}
+  Decision:      Executed model action directly.
+  Reward:    +0.00  (interview)
+  Result:    Interviewed Olivia (C03). Interview score: 0.364. Budget remaining: 160.
+[STEP]  step=3 action={"action": "interview", "candidate_id": "C03"} reward=0.00 done=false error=interview
+
+[Step 4]
+  Reasoning: Reasoning: Olivia (C03) has a very low interview score (0.364) despite a high resume (0.90), suggesting she is a poor fit; I will skip her and move to Grace (C04) to get more signal.
+  Model action:  {"action":"skip","candidate_id":"C03"}
+  Safe action:   {"action":"skip","candidate_id":"C03"}
+  Final action:  {"action": "skip", "candidate_id": "C03"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Skipped Olivia (C03). No cost.
+[STEP]  step=4 action={"action": "skip", "candidate_id": "C03"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 5]
+  Reasoning: Reasoning: Quinn (C01) has a very low resume score (0.08), so I will skip them to save budget for more promising candidates.
+  Model action:  {"action":"skip","candidate_id":"C01"}
+  Safe action:   {"action":"skip","candidate_id":"C01"}
+  Final action:  {"action": "skip", "candidate_id": "C01"}
+  Decision:      Executed model action directly.
+  Reward:    +15.00  (bonus: skipped weak low-evidence candidate; penalty: step drift)
+  Result:    Skipped Quinn (C01). No cost.
+[STEP]  step=5 action={"action": "skip", "candidate_id": "C01"} reward=15.00 done=false error=bonus: skipped weak low-evidence candidate; penalty: step drift
+
+[Step 6]
+  Reasoning: Reasoning: Grace (C04) has a moderate resume score (0.54) and warrants an interview to determine if she is worth a hire.
+  Model action:  {"action":"interview","candidate_id":"C04"}
+  Safe action:   {"action":"interview","candidate_id":"C04"}
+  Final action:  {"action": "interview", "candidate_id": "C04"}
+  Decision:      Executed model action directly.
+  Reward:    +35.00  (bonus: interviewed uncertain candidate; penalty: step drift)
+  Result:    Interviewed Grace (C04). Interview score: 0.488. Budget remaining: 150.
+[STEP]  step=6 action={"action": "interview", "candidate_id": "C04"} reward=35.00 done=false error=bonus: interviewed uncertain candidate; penalty: step drift        
+
+[Step 7]
+  Reasoning: Reasoning: Grace (C04) has a low interview score (0.488) matching her resume, so I will skip her to save budget.
+  Model action:  {"action":"skip","candidate_id":"C04"}
+  Safe action:   {"action":"skip","candidate_id":"C04"}
+  Final action:  {"action": "skip", "candidate_id": "C04"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Skipped Grace (C04). No cost.
+[STEP]  step=7 action={"action": "skip", "candidate_id": "C04"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 8]
+  Reasoning: Reasoning: C05, C06, and C07 have very low resume scores; I will skip C05 to save budget and move to more promising candidates.
+  Model action:  {"action":"skip","candidate_id":"C05"}
+  Safe action:   {"action":"skip","candidate_id":"C05"}
+  Final action:  {"action": "skip", "candidate_id": "C05"}
+  Decision:      Executed model action directly.
+  Reward:    +15.00  (bonus: skipped weak low-evidence candidate; penalty: step drift)
+  Result:    Skipped Frank (C05). No cost.
+[STEP]  step=8 action={"action": "skip", "candidate_id": "C05"} reward=15.00 done=false error=bonus: skipped weak low-evidence candidate; penalty: step drift
+
+[Step 9]
+  Reasoning: Reasoning: C08 has a high resume score (0.79) and needs an interview to verify quality.
+  Model action:  {"action":"interview","candidate_id":"C08"}
+  Safe action:   {"action":"interview","candidate_id":"C08"}
+  Final action:  {"action": "interview", "candidate_id": "C08"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Xavier (C08). Interview score: 0.793. Budget remaining: 140.
+[STEP]  step=9 action={"action": "interview", "candidate_id": "C08"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 10]
+  Reasoning: Reasoning: Xavier (C08) has a high resume and interview score that align well, but since he is a high-confidence candidate, I must probe him to ensure he wasn't coached before hiring.
+  Model action:  {"action":"probe","candidate_id":"C08"}
+  Safe action:   {"action":"probe","candidate_id":"C08"}
+  Final action:  {"action": "probe", "candidate_id": "C08"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (probe gap=0.06; penalty: step drift)
+  Result:    Probed Xavier (C08). Score: 0.729. (interview=0.793, gap=0.06). Budget remaining: 120.
+[STEP]  step=10 action={"action": "probe", "candidate_id": "C08"} reward=-5.00 done=false error=probe gap=0.06; penalty: step drift
+
+[Step 11]
+  Reasoning: Reasoning: Xavier (C08) has a solid true skill (0.729) and a high interview score; I will hire him to secure a strong candidate.
+  Model action:  {"action":"hire","candidate_id":"C08"}
+  Safe action:   {"action":"hire","candidate_id":"C08"}
+  Final action:  {"action": "hire", "candidate_id": "C08"}
+  Decision:      Executed model action directly.
+  Reward:    +115.00  (bonus: strong evidence hire; bonus: covered missing required role; penalty: step drift)
+  Result:    Hired Xavier (C08) — evidence-aware hire. Budget remaining: 70.
+[STEP]  step=11 action={"action": "hire", "candidate_id": "C08"} reward=115.00 done=false error=bonus: strong evidence hire; bonus: covered missing required role; penalty: step drift
+
+[Step 12]
+  Reasoning: Reasoning: Wendy (C09) has a decent resume score (0.64) and I need more signal to decide if she is worth a hire.
+  Model action:  {"action":"interview","candidate_id":"C09"}
+  Safe action:   {"action":"interview","candidate_id":"C09"}
+  Final action:  {"action": "interview", "candidate_id": "C09"}
+  Decision:      Executed model action directly.
+  Reward:    +35.00  (bonus: interviewed uncertain candidate; penalty: step drift)
+  Result:    Interviewed Wendy (C09). Interview score: 0.405. Budget remaining: 60.
+[STEP]  step=12 action={"action": "interview", "candidate_id": "C09"} reward=35.00 done=false error=bonus: interviewed uncertain candidate; penalty: step drift       
+
+[Step 13]
+  Reasoning: Reasoning: Wendy (C09) has a low interview score (0.405) compared to her resume (0.64), so I will skip her and move to the next candidate to find better value.
+  Model action:  {"action":"skip","candidate_id":"C09"}
+  Safe action:   {"action":"skip","candidate_id":"C09"}
+  Final action:  {"action": "skip", "candidate_id": "C09"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Skipped Wendy (C09). No cost.
+[STEP]  step=13 action={"action": "skip", "candidate_id": "C09"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 14]
+  Reasoning: Reasoning: Diana (C11) has a very high resume score (0.96), so I must probe her to ensure she isn't coached before hiring.
+  Model action:  {"action":"probe","candidate_id":"C11"}
+  Safe action:   {"action":"probe","candidate_id":"C11"}
+  Final action:  {"action": "probe", "candidate_id": "C11"}
+  Decision:      Executed model action directly.
+  Reward:    -20.00  (Must interview before probing.)
+  Result:    Error: must interview Diana before probing.
+[STEP]  step=14 action={"action": "probe", "candidate_id": "C11"} reward=-20.00 done=false error=Must interview before probing.
+
+[Step 15]
+  Reasoning: Reasoning: Diana (C11) has a very high resume score (0.96), so I must interview her first to check for coaching before deciding to probe or hire.        
+  Model action:  {"action":"interview","candidate_id":"C11"}
+  Safe action:   {"action":"interview","candidate_id":"C11"}
+  Final action:  {"action": "interview", "candidate_id": "C11"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Diana (C11). Interview score: 0.746. Budget remaining: 50.
+[STEP]  step=15 action={"action": "interview", "candidate_id": "C11"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 16]
+  Reasoning: Reasoning: Diana (C11) has a high resume (0.96) but a much lower interview score (0.746), suggesting potential coaching; however, with only 50 units left, I can only afford one more hire or several in...
+  Model action:  {"action":"interview","candidate_id":"C13"}
+  Safe action:   {"action":"interview","candidate_id":"C13"}
+  Final action:  {"action": "interview", "candidate_id": "C13"}
+  Decision:      Executed model action directly.
+  Reward:    +35.00  (bonus: interviewed uncertain candidate; penalty: step drift)
+  Result:    Interviewed Henry (C13). Interview score: 0.266. Budget remaining: 40.
+[STEP]  step=16 action={"action": "interview", "candidate_id": "C13"} reward=35.00 done=false error=bonus: interviewed uncertain candidate; penalty: step drift       
+
+[Step 17]
+  Reasoning: Reasoning: With only 40 units left and a hire costing 50, I cannot afford any more hires; I must finalize to secure my current team.
+  Model action:  {"action":"finalize"}
+  Safe action:   {"action":"finalize"}
+  Final action:  {"action": "finalize"}
+  Decision:      Executed model action directly.
+  Reward:    +0.63  (Finalized. Score=0.6263)
+  Result:    Episode finalized. Final score: 0.6263. Avg true skill: 0.765. Cost ratio: 0.778.
+[STEP]  step=17 action={"action": "finalize"} reward=0.63 done=true error=Finalized. Score=0.6263
+
+  FINAL SCORE [medium]: 0.6263
+[END]   success=true steps=17 score=0.63 rewards=40.00,0.00,0.00,-5.00,15.00,35.00,-5.00,15.00,-5.00,-5.00,115.00,35.00,-5.00,-20.00,-5.00,35.00,0.63
+
+============================================================
+  TASK: HARD
+============================================================
+[START] task=hard env=AgentHire-Arena model=google/gemma-4-26B-A4B-it
+
+[Step 1]
+  Reasoning: Reasoning: I will start by interviewing high-potential candidates with high resume scores to verify their skills.
+  Model action:  {"action":"interview","candidate_id":"C03"}
+  Safe action:   {"action":"interview","candidate_id":"C03"}
+  Final action:  {"action": "interview", "candidate_id": "C03"}
+  Decision:      Executed model action directly.
+  Reward:    +0.00  (interview)
+  Result:    Interviewed Noah (C03). Interview score: 1.000. Budget remaining: 190.
+[STEP]  step=1 action={"action": "interview", "candidate_id": "C03"} reward=0.00 done=false error=interview
+
+[Step 2]
+  Reasoning: Reasoning: Noah (C03) has a very high resume and interview score, so I must probe to ensure he wasn't coached.
+  Model action:  {"action":"probe","candidate_id":"C03"}
+  Safe action:   {"action":"probe","candidate_id":"C03"}
+  Final action:  {"action": "probe", "candidate_id": "C03"}
+  Decision:      Executed model action directly.
+  Reward:    +30.00  (bonus: probed high-risk candidate; probe gap=0.09)
+  Result:    Probed Noah (C03). Score: 0.909. (interview=1.000, gap=0.09). Budget remaining: 170.
+[STEP]  step=2 action={"action": "probe", "candidate_id": "C03"} reward=30.00 done=false error=bonus: probed high-risk candidate; probe gap=0.09
+
+[Step 3]
+  Reasoning: Reasoning: Noah (C03) has a high true skill (0.909) after probing, making him a strong candidate to hire.
+  Model action:  {"action":"hire","candidate_id":"C03"}
+  Safe action:   {"action":"hire","candidate_id":"C03"}
+  Final action:  {"action": "hire", "candidate_id": "C03"}
+  Decision:      Executed model action directly.
+  Reward:    +120.00  (bonus: strong evidence hire; bonus: covered missing required role)
+  Result:    Hired Noah (C03) — evidence-aware hire. Budget remaining: 120.
+[STEP]  step=3 action={"action": "hire", "candidate_id": "C03"} reward=120.00 done=false error=bonus: strong evidence hire; bonus: covered missing required role      
+
+[Step 4]
+  Reasoning: Reasoning: C01 has a very low resume score, so I will skip them to save budget.
+  Model action:  {"action":"skip","candidate_id":"C01"}
+  Safe action:   {"action":"skip","candidate_id":"C01"}
+  Final action:  {"action": "skip", "candidate_id": "C01"}
+  Decision:      Executed model action directly.
+  Reward:    +15.00  (bonus: skipped weak low-evidence candidate; penalty: step drift)
+  Result:    Skipped Wendy (C01). No cost.
+[STEP]  step=4 action={"action": "skip", "candidate_id": "C01"} reward=15.00 done=false error=bonus: skipped weak low-evidence candidate; penalty: step drift
+
+[Step 5]
+  Reasoning: Reasoning: Xavier (C04) has a high resume score (0.85) and should be interviewed to verify skill level.
+  Model action:  {"action":"interview","candidate_id":"C04"}
+  Safe action:   {"action":"interview","candidate_id":"C04"}
+  Final action:  {"action": "interview", "candidate_id": "C04"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Xavier (C04). Interview score: 0.301. Budget remaining: 110.
+[STEP]  step=5 action={"action": "interview", "candidate_id": "C04"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 6]
+  Reasoning: Reasoning: Xavier (C04) has a very low interview score (0.301) despite a high resume (0.85), so I will skip him and move to interview the next high-potential candidate, David (C05).
+  Model action:  {"action":"skip","candidate_id":"C04"}
+  Safe action:   {"action":"skip","candidate_id":"C04"}
+  Final action:  {"action": "skip", "candidate_id": "C04"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Skipped Xavier (C04). No cost.
+[STEP]  step=6 action={"action": "skip", "candidate_id": "C04"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 7]
+  Reasoning: Reasoning: Tara (C02) has a low resume score (0.39), so I will skip her to focus on better candidates.
+  Model action:  {"action":"skip","candidate_id":"C02"}
+  Safe action:   {"action":"skip","candidate_id":"C02"}
+  Final action:  {"action": "skip", "candidate_id": "C02"}
+  Decision:      Executed model action directly.
+  Reward:    +15.00  (bonus: skipped weak low-evidence candidate; penalty: step drift)
+  Result:    Skipped Tara (C02). No cost.
+[STEP]  step=7 action={"action": "skip", "candidate_id": "C02"} reward=15.00 done=false error=bonus: skipped weak low-evidence candidate; penalty: step drift
+
+[Step 8]
+  Reasoning: Reasoning: David (C05) has a solid resume score (0.76) and is worth interviewing to confirm his skill level.
+  Model action:  {"action":"interview","candidate_id":"C05"}
+  Safe action:   {"action":"interview","candidate_id":"C05"}
+  Final action:  {"action": "interview", "candidate_id": "C05"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed David (C05). Interview score: 0.206. Budget remaining: 100.
+[STEP]  step=8 action={"action": "interview", "candidate_id": "C05"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 9]
+  Reasoning: Reasoning: David (C05) has a very low interview score (0.206) despite a decent resume, so I will skip him.
+  Model action:  {"action":"skip","candidate_id":"C05"}
+  Safe action:   {"action":"skip","candidate_id":"C05"}
+  Final action:  {"action": "skip", "candidate_id": "C05"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Skipped David (C05). No cost.
+[STEP]  step=9 action={"action": "skip", "candidate_id": "C05"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 10]
+  Reasoning: Reasoning: C06 has a very low resume score (0.32), so I will skip them to save budget for more promising candidates.
+  Model action:  {"action":"skip","candidate_id":"C06"}
+  Safe action:   {"action":"skip","candidate_id":"C06"}
+  Final action:  {"action": "skip", "candidate_id": "C06"}
+  Decision:      Executed model action directly.
+  Reward:    +15.00  (bonus: skipped weak low-evidence candidate; penalty: step drift)
+  Result:    Skipped Bob (C06). No cost.
+[STEP]  step=10 action={"action": "skip", "candidate_id": "C06"} reward=15.00 done=false error=bonus: skipped weak low-evidence candidate; penalty: step drift        
+
+[Step 11]
+  Reasoning: Reasoning: Carol (C09) has a high resume score (0.90) and warrants an interview to verify her potential.
+  Model action:  {"action":"interview","candidate_id":"C09"}
+  Safe action:   {"action":"interview","candidate_id":"C09"}
+  Final action:  {"action": "interview", "candidate_id": "C09"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Carol (C09). Interview score: 0.095. Budget remaining: 90.
+[STEP]  step=11 action={"action": "interview", "candidate_id": "C09"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 12]
+  Reasoning: Reasoning: Carol (C09) failed the interview (0.095), so I will skip her and move to the next candidate with a decent resume score, Yara (C07), to get more signal.
+  Model action:  {"action":"skip","candidate_id":"C09"}
+  Safe action:   {"action":"skip","candidate_id":"C09"}
+  Final action:  {"action": "skip", "candidate_id": "C09"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Skipped Carol (C09). No cost.
+[STEP]  step=12 action={"action": "skip", "candidate_id": "C09"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 13]
+  Reasoning: Reasoning: Jack (C12) has a very high resume score (0.89) and requires a probe to ensure he isn't coached before hiring.
+  Model action:  {"action":"interview","candidate_id":"C12"}
+  Safe action:   {"action":"interview","candidate_id":"C12"}
+  Final action:  {"action": "interview", "candidate_id": "C12"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Jack (C12). Interview score: 0.180. Budget remaining: 80.
+[STEP]  step=13 action={"action": "interview", "candidate_id": "C12"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 14]
+  Reasoning: Reasoning: Jack (C12) has a very low interview score (0.180) despite a high resume score, so I will skip him.
+  Model action:  {"action":"skip","candidate_id":"C12"}
+  Safe action:   {"action":"skip","candidate_id":"C12"}
+  Final action:  {"action": "skip", "candidate_id": "C12"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Skipped Jack (C12). No cost.
+[STEP]  step=14 action={"action": "skip", "candidate_id": "C12"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 15]
+  Reasoning: Reasoning: C07 has a moderate resume score (0.50), so I will interview to get a better signal.
+  Model action:  {"action":"interview","candidate_id":"C07"}
+  Safe action:   {"action":"interview","candidate_id":"C07"}
+  Final action:  {"action": "interview", "candidate_id": "C07"}
+  Decision:      Executed model action directly.
+  Reward:    +35.00  (bonus: interviewed uncertain candidate; penalty: step drift)
+  Result:    Interviewed Yara (C07). Interview score: 0.560. Budget remaining: 70.
+[STEP]  step=15 action={"action": "interview", "candidate_id": "C07"} reward=35.00 done=false error=bonus: interviewed uncertain candidate; penalty: step drift       
+
+[Step 16]
+  Reasoning: Reasoning: Yara (C07) has a mediocre interview score (0.56) matching her resume; I will skip her to save budget for better candidates.
+  Model action:  {"action":"skip","candidate_id":"C07"}
+  Safe action:   {"action":"skip","candidate_id":"C07"}
+  Final action:  {"action": "skip", "candidate_id": "C07"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Skipped Yara (C07). No cost.
+[STEP]  step=16 action={"action": "skip", "candidate_id": "C07"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 17]
+  Reasoning: Reasoning: C13 has a high resume score (0.78) and is worth interviewing to verify potential.
+  Model action:  {"action":"interview","candidate_id":"C13"}
+  Safe action:   {"action":"interview","candidate_id":"C13"}
+  Final action:  {"action": "interview", "candidate_id": "C13"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Sam (C13). Interview score: 0.772. Budget remaining: 60.
+[STEP]  step=17 action={"action": "interview", "candidate_id": "C13"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 18]
+  Reasoning: Reasoning: C15 has a decent resume score (0.65) and I have enough budget for one more interview to see if they are worth a potential hire.
+  Model action:  {"action":"interview","candidate_id":"C15"}
+  Safe action:   {"action":"interview","candidate_id":"C15"}
+  Final action:  {"action": "interview", "candidate_id": "C15"}
+  Decision:      Executed model action directly.
+  Reward:    +35.00  (bonus: interviewed uncertain candidate; penalty: step drift)
+  Result:    Interviewed Rachel (C15). Interview score: 0.701. Budget remaining: 50.
+[STEP]  step=18 action={"action": "interview", "candidate_id": "C15"} reward=35.00 done=false error=bonus: interviewed uncertain candidate; penalty: step drift       
+
+[Step 19]
+  Reasoning: Reasoning: Rachel (C15) has a solid interview score (0.701) and a decent resume (0.65); I will hire her to secure a quality team member.
+  Model action:  {"action":"hire","candidate_id":"C15"}
+  Safe action:   {"action":"hire","candidate_id":"C15"}
+  Final action:  {"action": "hire", "candidate_id": "C15"}
+  Decision:      Executed model action directly.
+  Reward:    -105.00  (penalty: step drift; penalty: budget effectively exhausted)
+  Result:    Hired Rachel (C15) — evidence-aware hire. Budget remaining: 0.
+[STEP]  step=19 action={"action": "hire", "candidate_id": "C15"} reward=-105.00 done=false error=penalty: step drift; penalty: budget effectively exhausted
+
+[Step 20]
+  Reasoning: Reasoning: Budget is 0, so no more actions are possible; I must finalize to score the current team.
+  Model action:  {"action":"finalize"}
+  Safe action:   {"action":"finalize"}
+  Final action:  {"action": "finalize"}
+  Decision:      Executed model action directly.
+  Reward:    +0.69  (Finalized. Score=0.6883)
+  Result:    Episode finalized. Final score: 0.6883. Avg true skill: 0.855. Cost ratio: 1.000.
+[STEP]  step=20 action={"action": "finalize"} reward=0.69 done=true error=Finalized. Score=0.6883
+
+  FINAL SCORE [hard]: 0.6883
+[END]   success=true steps=20 score=0.69 rewards=0.00,30.00,120.00,15.00,-5.00,-5.00,15.00,-5.00,-5.00,15.00,-5.00,-5.00,-5.00,-5.00,35.00,-5.00,-5.00,35.00,-105.00,0.69
+
+============================================================
+  TASK: ADVERSARIAL
+============================================================
+[START] task=adversarial env=AgentHire-Arena model=google/gemma-4-26B-A4B-it
+
+[Step 1]
+  Reasoning: Reasoning: I will start by interviewing high-potential candidates with strong resumes to get a better signal.
+  Model action:  {"action":"interview","candidate_id":"C01"}
+  Safe action:   {"action":"interview","candidate_id":"C01"}
+  Final action:  {"action": "interview", "candidate_id": "C01"}
+  Decision:      Executed model action directly.
+  Reward:    +0.00  (interview)
+  Result:    Interviewed Wendy (C01). Interview score: 0.889. Budget remaining: 170.
+[STEP]  step=1 action={"action": "interview", "candidate_id": "C01"} reward=0.00 done=false error=interview
+
+[Step 2]
+  Reasoning: Reasoning: Wendy (C01) has a high interview score (0.889) and high resume score (0.83), but since she is high-confidence, I should probe her first to ensure she isn't coached.
+  Model action:  {"action":"probe","candidate_id":"C01"}
+  Safe action:   {"action":"probe","candidate_id":"C01"}
+  Final action:  {"action": "probe", "candidate_id": "C01"}
+  Decision:      Executed model action directly.
+  Reward:    +30.00  (bonus: probed high-risk candidate; probe gap=0.01)
+  Result:    Probed Wendy (C01). Score: 0.875. (interview=0.889, gap=0.01). Budget remaining: 140.
+[STEP]  step=2 action={"action": "probe", "candidate_id": "C01"} reward=30.00 done=false error=bonus: probed high-risk candidate; probe gap=0.01
+
+[Step 3]
+  Reasoning: Reasoning: Wendy (C01) has a high, verified skill score (0.875) and is a strong candidate for a Backend role.
+  Model action:  {"action":"hire","candidate_id":"C01"}
+  Safe action:   {"action":"hire","candidate_id":"C01"}
+  Final action:  {"action": "hire", "candidate_id": "C01"}
+  Decision:      Executed model action directly.
+  Reward:    +120.00  (bonus: strong evidence hire; bonus: covered missing required role)
+  Result:    Hired Wendy (C01) — evidence-aware hire. Budget remaining: 90.
+[STEP]  step=3 action={"action": "hire", "candidate_id": "C01"} reward=120.00 done=false error=bonus: strong evidence hire; bonus: covered missing required role      
+
+[Step 4]
+  Reasoning: Reasoning: C02 has a very low resume score (0.21), so I will skip them to save budget for more promising candidates.
+  Model action:  {"action":"skip","candidate_id":"C02"}
+  Safe action:   {"action":"skip","candidate_id":"C02"}
+  Final action:  {"action": "skip", "candidate_id": "C02"}
+  Decision:      Executed model action directly.
+  Reward:    +15.00  (bonus: skipped weak low-evidence candidate; penalty: step drift)
+  Result:    Skipped Tara (C02). No cost.
+[STEP]  step=4 action={"action": "skip", "candidate_id": "C02"} reward=15.00 done=false error=bonus: skipped weak low-evidence candidate; penalty: step drift
+
+[Step 5]
+  Reasoning: Reasoning: Noah (C03) has a strong resume score (0.79) and I need more signal to decide whether to hire or skip.
+  Model action:  {"action":"interview","candidate_id":"C03"}
+  Safe action:   {"action":"interview","candidate_id":"C03"}
+  Final action:  {"action": "interview", "candidate_id": "C03"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Noah (C03). Interview score: 0.576. Budget remaining: 80.
+[STEP]  step=5 action={"action": "interview", "candidate_id": "C03"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 6]
+  Reasoning: Reasoning: Noah (C03) has a low interview score (0.576) despite a decent resume, so I will skip him to save budget.
+  Model action:  {"action":"skip","candidate_id":"C03"}
+  Safe action:   {"action":"skip","candidate_id":"C03"}
+  Final action:  {"action": "skip", "candidate_id": "C03"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Skipped Noah (C03). No cost.
+[STEP]  step=6 action={"action": "skip", "candidate_id": "C03"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 7]
+  Reasoning: Reasoning: C06 has a very high resume score (0.98) and is a strong candidate, but I must interview to get a reliable signal.
+  Model action:  {"action":"interview","candidate_id":"C06"}
+  Safe action:   {"action":"interview","candidate_id":"C06"}
+  Final action:  {"action": "interview", "candidate_id": "C06"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Bob (C06). Interview score: 0.531. Budget remaining: 70.
+[STEP]  step=7 action={"action": "interview", "candidate_id": "C06"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 8]
+  Reasoning: Reasoning: Bob (C06) has a low interview score despite a high resume, so I will skip him and move to Xavier (C04) to gather more signal.
+  Model action:  {"action":"interview","candidate_id":"C04"}
+  Safe action:   {"action":"interview","candidate_id":"C04"}
+  Final action:  {"action": "interview", "candidate_id": "C04"}
+  Decision:      Executed model action directly.
+  Reward:    +35.00  (bonus: interviewed uncertain candidate; penalty: step drift)
+  Result:    Interviewed Xavier (C04). Interview score: 0.964. Budget remaining: 60.
+[STEP]  step=8 action={"action": "interview", "candidate_id": "C04"} reward=35.00 done=false error=bonus: interviewed uncertain candidate; penalty: step drift        
+
+[Step 9]
+  Reasoning: Reasoning: Xavier (C04) has a high interview score (0.964) compared to his resume (0.70), suggesting potential coaching; I must probe to verify his true skill before hiring.
+  Model action:  {"action":"probe","candidate_id":"C04"}
+  Safe action:   {"action":"probe","candidate_id":"C04"}
+  Final action:  {"action": "probe", "candidate_id": "C04"}
+  Decision:      Executed model action directly.
+  Reward:    +75.00  (bonus: useful probe signal; bonus: probed high-risk candidate; probe gap=0.21; penalty: step drift)
+  Result:    Probed Xavier (C04). Score: 0.749. (interview=0.964, gap=0.21). Budget remaining: 30.
+[STEP]  step=9 action={"action": "probe", "candidate_id": "C04"} reward=75.00 done=false error=bonus: useful probe signal; bonus: probed high-risk candidate; probe gap=0.21; penalty: step drift
+
+[Step 10]
+  Reasoning: Reasoning: Budget is critically low (30 units) and a hire costs 50, meaning I cannot hire anyone else; I must finalize to secure current team.
+  Model action:  {"action":"finalize"}
+  Safe action:   {"action":"finalize"}
+  Final action:  {"action": "finalize"}
+  Decision:      Executed model action directly.
+  Reward:    +0.45  (Finalized. Score=0.4452)
+  Result:    Episode finalized. Final score: 0.4452. Avg true skill: 0.911. Cost ratio: 0.833.
+[STEP]  step=10 action={"action": "finalize"} reward=0.45 done=true error=Finalized. Score=0.4452
+
+  FINAL SCORE [adversarial]: 0.4452
+[END]   success=true steps=10 score=0.45 rewards=0.00,30.00,120.00,15.00,-5.00,-5.00,-5.00,35.00,75.00,0.45
+
+============================================================
+  TASK: NIGHTMARE
+============================================================
+[START] task=nightmare env=AgentHire-Arena model=google/gemma-4-26B-A4B-it
+
+[Step 1]
+  Reasoning: Reasoning: I will start by interviewing high-potential candidates with high resume scores to verify their skills.
+  Model action:  {"action":"interview","candidate_id":"C01"}
+  Safe action:   {"action":"interview","candidate_id":"C01"}
+  Final action:  {"action": "interview", "candidate_id": "C01"}
+  Decision:      Executed model action directly.
+  Reward:    +0.00  (interview)
+  Result:    Interviewed Bella (C01). Interview score: 0.479. Budget remaining: 170.
+[STEP]  step=1 action={"action": "interview", "candidate_id": "C01"} reward=0.00 done=false error=interview
+
+[Step 2]
+  Reasoning: Reasoning: Bella (C01) had a low interview score (0.479) despite a high resume (0.83), so I will skip her and move to interview the high-potential Aaron (C02).
+  Model action:  {"action":"skip","candidate_id":"C01"}
+  Safe action:   {"action":"skip","candidate_id":"C01"}
+  Final action:  {"action": "skip", "candidate_id": "C01"}
+  Decision:      Executed model action directly.
+  Reward:    +0.00  (skip)
+  Result:    Skipped Bella (C01). No cost.
+[STEP]  step=2 action={"action": "skip", "candidate_id": "C01"} reward=0.00 done=false error=skip
+
+[Step 3]
+  Reasoning: Reasoning: Aaron (C02) has a very high resume score (0.98), so I must probe to verify his true skill before hiring.
+  Model action:  {"action":"probe","candidate_id":"C02"}
+  Safe action:   {"action":"probe","candidate_id":"C02"}
+  Final action:  {"action": "probe", "candidate_id": "C02"}
+  Decision:      Executed model action directly.
+  Reward:    -20.00  (Must interview before probing.)
+  Result:    Error: must interview Aaron before probing.
+[STEP]  step=3 action={"action": "probe", "candidate_id": "C02"} reward=-20.00 done=false error=Must interview before probing.
+
+[Step 4]
+  Reasoning: Reasoning: Aaron (C02) has a very high resume score (0.98), so I must interview him first to prepare for a potential probe.
+  Model action:  {"action":"interview","candidate_id":"C02"}
+  Safe action:   {"action":"interview","candidate_id":"C02"}
+  Final action:  {"action": "interview", "candidate_id": "C02"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Aaron (C02). Interview score: 0.795. Budget remaining: 160.
+[STEP]  step=4 action={"action": "interview", "candidate_id": "C02"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 5]
+  Reasoning: Reasoning: Paul (C03) has a high resume score (0.83) and needs an interview to verify his actual skill level.
+  Model action:  {"action":"interview","candidate_id":"C03"}
+  Safe action:   {"action":"interview","candidate_id":"C03"}
+  Final action:  {"action": "interview", "candidate_id": "C03"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Paul (C03). Interview score: 0.445. Budget remaining: 150.
+[STEP]  step=5 action={"action": "interview", "candidate_id": "C03"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 6]
+  Reasoning: Reasoning: Aaron (C02) has a high resume score (0.98) and a decent interview score (0.795), but since the resume is very high, I should probe to ensure he isn't coached.
+  Model action:  {"action":"probe","candidate_id":"C02"}
+  Safe action:   {"action":"probe","candidate_id":"C02"}
+  Final action:  {"action": "probe", "candidate_id": "C02"}
+  Decision:      Executed model action directly.
+  Reward:    +75.00  (bonus: useful probe signal; bonus: probed high-risk candidate; probe gap=-0.20; penalty: step drift)
+  Result:    Probed Aaron (C02). Score: 1.000. (interview=0.795, gap=-0.20). Budget remaining: 120.
+[STEP]  step=6 action={"action": "probe", "candidate_id": "C02"} reward=75.00 done=false error=bonus: useful probe signal; bonus: probed high-risk candidate; probe gap=-0.20; penalty: step drift
+
+[Step 7]
+  Reasoning: Reasoning: Aaron (C02) has a true skill of 1.000 after probing, which is a high-quality hire.
+  Model action:  {"action":"hire","candidate_id":"C02"}
+  Safe action:   {"action":"hire","candidate_id":"C02"}
+  Final action:  {"action": "hire", "candidate_id": "C02"}
+  Decision:      Executed model action directly.
+  Reward:    +35.00  (bonus: covered missing required role; penalty: step drift)
+  Result:    Hired Aaron (C02) — evidence-aware hire. Budget remaining: 70.
+[STEP]  step=7 action={"action": "hire", "candidate_id": "C02"} reward=35.00 done=false error=bonus: covered missing required role; penalty: step drift
+
+[Step 8]
+  Reasoning: Reasoning: Paul (C03) has a low interview score (0.445) despite a high resume score (0.83), suggesting he is not a good fit. I will skip him to save budget.
+  Model action:  {"action":"skip","candidate_id":"C03"}
+  Safe action:   {"action":"skip","candidate_id":"C03"}
+  Final action:  {"action": "skip", "candidate_id": "C03"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Skipped Paul (C03). No cost.
+[STEP]  step=8 action={"action": "skip", "candidate_id": "C03"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 9]
+  Reasoning: Reasoning: Mia (C04) has a strong resume score (0.80) and I need more signal to decide if she is worth the high cost of hiring.
+  Model action:  {"action":"interview","candidate_id":"C04"}
+  Safe action:   {"action":"interview","candidate_id":"C04"}
+  Final action:  {"action": "interview", "candidate_id": "C04"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Mia (C04). Interview score: 0.609. Budget remaining: 60.
+[STEP]  step=9 action={"action": "interview", "candidate_id": "C04"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 10]
+  Reasoning: Reasoning: Mia (C04) has a low interview score (0.609) relative to her resume (0.80), so I will skip her and move to Zoe (C05) to gather more signal.    
+  Model action:  {"action":"skip","candidate_id":"C04"}
+  Safe action:   {"action":"skip","candidate_id":"C04"}
+  Final action:  {"action": "skip", "candidate_id": "C04"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Skipped Mia (C04). No cost.
+[STEP]  step=10 action={"action": "skip", "candidate_id": "C04"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 11]
+  Reasoning: Reasoning: C07 has a very high resume score (0.98) and warrants an interview to check for coaching or high skill.
+  Model action:  {"action":"interview","candidate_id":"C07"}
+  Safe action:   {"action":"interview","candidate_id":"C07"}
+  Final action:  {"action": "interview", "candidate_id": "C07"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed David (C07). Interview score: 0.813. Budget remaining: 50.
+[STEP]  step=11 action={"action": "interview", "candidate_id": "C07"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 12]
+  Reasoning: Reasoning: David (C07) has a high resume (0.98) but a lower interview score (0.813), suggesting potential coaching or mismatch; however, I have only 50 units left, which is exactly one hire. I need to...
+  Model action:  {"action":"interview","candidate_id":"C05"}
+  Safe action:   {"action":"interview","candidate_id":"C05"}
+  Final action:  {"action": "interview", "candidate_id": "C05"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Zoe (C05). Interview score: 0.578. Budget remaining: 40.
+[STEP]  step=12 action={"action": "interview", "candidate_id": "C05"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 13]
+  Reasoning: Reasoning: I have only 40 units left, which is not enough to hire anyone (cost 50). I must use the remaining budget to interview candidates to find high-quality talent for future rounds or simply fina...
+  Model action:  {"action":"interview","candidate_id":"C06"}
+  Safe action:   {"action":"interview","candidate_id":"C06"}
+  Final action:  {"action": "interview", "candidate_id": "C06"}
+  Decision:      Executed model action directly.
+  Reward:    -5.00  (penalty: step drift)
+  Result:    Interviewed Alice (C06). Interview score: 0.026. Budget remaining: 30.
+[STEP]  step=13 action={"action": "interview", "candidate_id": "C06"} reward=-5.00 done=false error=penalty: step drift
+
+[Step 14]
+  Reasoning: Reasoning: Budget is critically low (30 units) and I cannot afford any more hires (50 units), so I must finalize the current team.
+  Model action:  {"action":"finalize"}
+  Safe action:   {"action":"finalize"}
+  Final action:  {"action": "finalize"}
+  Decision:      Executed model action directly.
+  Reward:    +0.21  (Finalized. Score=0.2110)
+  Result:    Episode finalized. Final score: 0.2110. Avg true skill: 0.877. Cost ratio: 0.833.
+[STEP]  step=14 action={"action": "finalize"} reward=0.21 done=true error=Finalized. Score=0.2110
+
+  FINAL SCORE [nightmare]: 0.2110
+[END]   success=true steps=14 score=0.21 rewards=0.00,0.00,-20.00,-5.00,-5.00,75.00,35.00,-5.00,-5.00,-5.00,-5.00,-5.00,-5.00,0.21
+
+============================================================
+  FINAL RESULTS
+============================================================
+  easy      0.9466  ██████████████████
+  medium    0.6263  ████████████
+  hard      0.6883  █████████████
+  adversarial  0.4452  ████████
+  nightmare  0.2110  ████
+  avg       0.5835
+============================================================
