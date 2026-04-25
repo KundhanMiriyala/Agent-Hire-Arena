@@ -329,6 +329,16 @@ TASK_POLICY = {
         "max_effective_interviews": 4,
         "min_budget_to_continue": 60,
     },
+    "nightmare": {
+    "target_interviews": 4,
+    "min_interview_coverage": 0.40,
+    "min_interviews_before_hire": 3, # Lowered to prevent budget death
+    "target_hires": 1,
+    "hire_interview_threshold": 0.80, # Must be very certain
+    "finalize_best_score": 0.85,
+    "max_effective_interviews": 3,
+    "min_budget_to_continue": 40,
+}
 }
 
 
