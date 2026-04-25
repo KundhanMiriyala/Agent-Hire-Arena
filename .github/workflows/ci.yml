@@ -2,19 +2,22 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ '**' ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -25,10 +28,45 @@ jobs:
           pip install openenv-core
 
       - name: Run tests
-        run: pytest -q
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m pytest -q
 
       - name: Validate OpenEnv spec
         run: openenv validate
 
       - name: Build Docker image
         run: docker build -t agenthire-arena .
+
+  deploy-hf-space:
+    name: Deploy to Hugging Face Space
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Validate required secret
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "Missing required secret: HF_TOKEN"
+            echo "Add a Hugging Face write token in GitHub repo secrets as HF_TOKEN."
+            exit 1
+          fi
+
+      - name: Push latest commit to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_REPO: kundhan3232/AgentHire-Arena
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add hf "https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE_REPO}"
+          git push hf HEAD:main
