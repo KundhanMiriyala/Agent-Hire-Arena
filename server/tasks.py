@@ -105,16 +105,15 @@ TASKS: Dict[str, TaskConfig] = {
     ),
     "medium": TaskConfig(
         name="medium",
-        num_candidates=10,
-        noise_level=0.15,
-        budget=220.0,
+        num_candidates=15,
+        noise_level=0.20,
+        budget=180.0,
         seed=137,
-        decoy_fraction=0.0,
+        decoy_fraction=0.10,
         max_steps=30,
-        role_requirements={"ML Engineer": 1, "Backend": 1},
+        role_requirements={"Backend": 1, "Frontend": 1, "Data Scientist": 1},
         description=(
-            "10 candidates, medium noise. Budget constrains full exploration. "
-            "Goal: balance interview cost vs hire quality."
+            "Moderate noise, requires building a well-rounded team."
         ),
     ),
     "hard": TaskConfig(
@@ -134,35 +133,33 @@ TASKS: Dict[str, TaskConfig] = {
     "adversarial": TaskConfig(
         name="adversarial",
         num_candidates=20,
-        noise_level=0.30,
-        budget=200.0,
+        noise_level=0.35,
+        budget=180.0,
         seed=999,
-        decoy_fraction=0.25,
+        decoy_fraction=0.35,
         coached_fraction=0.25,
         adversarial=True,
         adversarial_start_step=5,
         max_steps=50,
         role_requirements={"ML Engineer": 1, "Backend": 1, "Data Scientist": 1},
         description=(
-            "20 candidates, 25% coached decoys + live adversarial NPC hiring manager. "
-            "Resist pressure while catching coached candidates."
+            "20 candidates, high noise + 35% decoys. Budget restricts heavy exploration."
         ),
     ),
     "nightmare": TaskConfig(
         name="nightmare",
         num_candidates=25,
         noise_level=0.50,
-        budget=150.0,
+        budget=180.0,
         seed=777,
-        decoy_fraction=0.40,
+        decoy_fraction=0.50,
         coached_fraction=0.40,
         adversarial=True,
         adversarial_start_step=3,
         max_steps=60,
-        role_requirements={"ML Engineer": 1, "Backend": 1, "Data Scientist": 1},
+        role_requirements={"Backend": 1, "Frontend": 1, "Data Scientist": 1},
         description=(
-            "25 candidates, 40% coached decoys, VERY tight budget (150), escalating NPC pressure. "
-            "Maximum difficulty."
+            "25 candidates, 50% decoys. Brutal resource allocation constraint."
         ),
     ),
 }
