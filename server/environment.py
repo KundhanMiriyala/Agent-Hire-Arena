@@ -20,11 +20,23 @@ from server.grader import grade, explain_grade
 
 
 # Shaped step rewards
-REWARD_INTERVIEW_UNCERTAIN = +0.05   # interview in uncertainty zone (resume 0.4-0.75)
-REWARD_HIRE_INFORMED       = +0.10   # hire after interviewing
-PENALTY_HIRE_BLIND         = -0.05   # hire without interviewing
-PENALTY_BUDGET_EXHAUSTED   = -0.10   # budget runs out mid-episode
-REWARD_PROBE_AUDIT         = +0.03   # probe after interview to audit coaching risk
+PENALTY_INVALID_ACTION = -0.02
+PENALTY_DUPLICATE_ACTION = -0.02
+PENALTY_STEP_DRIFT = -0.005
+PENALTY_HIRE_BLIND = -0.10
+
+REWARD_INTERVIEW_UNCERTAIN = +0.04
+REWARD_PROBE_USEFUL = +0.05
+REWARD_PROBE_RISKY = +0.03
+PENALTY_PROBE_LOW_VALUE = -0.02
+
+REWARD_HIRE_EVIDENCE = +0.08
+REWARD_HIRE_ROLE_COVERAGE = +0.04
+PENALTY_HIRE_SUSPICIOUS = -0.08
+
+REWARD_SKIP_WEAK = +0.02
+REWARD_SKIP_DECOY_SIGNAL = +0.04
+PENALTY_BUDGET_EXHAUSTED = -0.10
 
 
 class HiringEnvironment:
@@ -61,6 +73,7 @@ class HiringEnvironment:
             last_action_result="Episode started. Examine candidates and begin hiring.",
             done=False,
             final_score=None,
+            budget_exhaustion_penalized=False,
         )
         return self._build_observation()
 
@@ -80,6 +93,13 @@ class HiringEnvironment:
         step_reward = 0.0
         reason_parts = []
 
+        def reject(step_reward_value: float, reason: str) -> Tuple[HiringObservation, HiringReward]:
+            rounded = round(step_reward_value, 4)
+            s.step_rewards.append(rounded)
+            return self._build_observation(), HiringReward(
+                step_reward=rounded, reason=reason
+            )
+
         # ---- FINALIZE ------------------------------------------------ #
         if action.action == "finalize":
             s.done = True
@@ -91,10 +111,9 @@ class HiringEnvironment:
                 f"Avg true skill: {breakdown['avg_true_skill']:.3f}. "
                 f"Cost ratio: {breakdown['cost_ratio']:.3f}."
             )
-            # record the finalize step as zero step reward
-            s.step_rewards.append(0.0)
+            s.step_rewards.append(round(final_score, 4))
             return self._build_observation(), HiringReward(
-                step_reward=0.0,
+                step_reward=round(final_score, 4),
                 final_score=final_score,
                 reason=f"Finalized. Score={final_score:.4f}",
             )
@@ -103,42 +122,30 @@ class HiringEnvironment:
         cid = action.candidate_id
         if not cid:
             s.last_action_result = "Error: candidate_id is required for this action."
-            return self._build_observation(), HiringReward(
-                step_reward=0.0, reason="Missing candidate_id."
-            )
+            return reject(PENALTY_INVALID_ACTION, "Missing candidate_id.")
 
         candidate = self._get_candidate(cid)
         if candidate is None:
             s.last_action_result = f"Error: candidate '{cid}' not found."
-            return self._build_observation(), HiringReward(
-                step_reward=0.0, reason=f"Unknown candidate {cid}."
-            )
+            return reject(PENALTY_INVALID_ACTION, f"Unknown candidate {cid}.")
 
         if cid in s.hires_made:
             s.last_action_result = f"Error: {candidate.name} is already hired."
-            return self._build_observation(), HiringReward(
-                step_reward=0.0, reason="Already hired."
-            )
+            return reject(PENALTY_DUPLICATE_ACTION, "Already hired.")
 
         if cid in s.skipped:
             s.last_action_result = f"Error: {candidate.name} was already skipped."
-            return self._build_observation(), HiringReward(
-                step_reward=0.0, reason="Already skipped."
-            )
+            return reject(PENALTY_DUPLICATE_ACTION, "Already skipped.")
 
         # ---- INTERVIEW ----------------------------------------------- #
         if action.action == "interview":
             if cid in s.interviews_done:
                 s.last_action_result = f"Error: {candidate.name} was already interviewed."
-                return self._build_observation(), HiringReward(
-                    step_reward=0.0, reason="Already interviewed."
-                )
+                return reject(PENALTY_DUPLICATE_ACTION, "Already interviewed.")
             cost = 10.0
             if s.budget_remaining < cost:
                 s.last_action_result = "Error: insufficient budget to interview."
-                return self._build_observation(), HiringReward(
-                    step_reward=0.0, reason="Insufficient budget."
-                )
+                return reject(PENALTY_INVALID_ACTION, "Insufficient budget.")
 
             s.budget_remaining -= cost
 
@@ -170,21 +177,15 @@ class HiringEnvironment:
         elif action.action == "probe":
             if cid not in s.interviews_done:
                 s.last_action_result = f"Error: {candidate.name} must be interviewed before probing."
-                return self._build_observation(), HiringReward(
-                    step_reward=0.0, reason="Must interview before probing."
-                )
+                return reject(PENALTY_INVALID_ACTION, "Must interview before probing.")
             if cid in s.probes_done:
                 s.last_action_result = f"Error: {candidate.name} was already probed."
-                return self._build_observation(), HiringReward(
-                    step_reward=0.0, reason="Already probed."
-                )
+                return reject(PENALTY_DUPLICATE_ACTION, "Already probed.")
 
             cost = 20.0
             if s.budget_remaining < cost:
                 s.last_action_result = "Error: insufficient budget to probe."
-                return self._build_observation(), HiringReward(
-                    step_reward=0.0, reason="Insufficient budget."
-                )
+                return reject(PENALTY_INVALID_ACTION, "Insufficient budget.")
 
             s.budget_remaining -= cost
 
@@ -194,8 +195,16 @@ class HiringEnvironment:
             s.probes_done[cid] = round(probe_score, 3)
             s.probe_gaps[cid] = probe_gap
 
-            step_reward += REWARD_PROBE_AUDIT
-            reason_parts.append("bonus: probed interviewed candidate")
+            gap_abs = abs(probe_gap)
+            if gap_abs >= 0.20:
+                step_reward += REWARD_PROBE_USEFUL
+                reason_parts.append("bonus: useful probe found signal gap")
+            if candidate.resume_score >= 0.84 or interview_score >= 0.78:
+                step_reward += REWARD_PROBE_RISKY
+                reason_parts.append("bonus: probed high-risk candidate")
+            if gap_abs < 0.08 and s.budget_remaining < 70.0:
+                step_reward += PENALTY_PROBE_LOW_VALUE
+                reason_parts.append("penalty: low-value probe under tight budget")
 
             s.last_action_result = (
                 f"Probed {candidate.name} ({cid}). "
@@ -210,16 +219,26 @@ class HiringEnvironment:
             cost = 50.0
             if s.budget_remaining < cost:
                 s.last_action_result = "Error: insufficient budget to hire."
-                return self._build_observation(), HiringReward(
-                    step_reward=0.0, reason="Insufficient budget."
-                )
+                return reject(PENALTY_INVALID_ACTION, "Insufficient budget.")
 
+            missing_roles = self._missing_required_roles()
             s.budget_remaining -= cost
             s.hires_made.append(cid)
 
             if cid in s.interviews_done:
-                step_reward += REWARD_HIRE_INFORMED
-                reason_parts.append("bonus: hired after interviewing")
+                interview_score = float(s.interviews_done[cid])
+                probe_score = s.probes_done.get(cid)
+                evidence_score = float(probe_score if probe_score is not None else interview_score)
+                disagreement = abs(interview_score - float(probe_score)) if probe_score is not None else abs(candidate.resume_score - interview_score)
+                if evidence_score >= 0.68 and disagreement <= 0.25:
+                    step_reward += REWARD_HIRE_EVIDENCE
+                    reason_parts.append("bonus: hired with strong evidence")
+                if candidate.role in missing_roles:
+                    step_reward += REWARD_HIRE_ROLE_COVERAGE
+                    reason_parts.append("bonus: covered missing role")
+                if disagreement >= 0.30:
+                    step_reward += PENALTY_HIRE_SUSPICIOUS
+                    reason_parts.append("penalty: hired despite suspicious signal gap")
                 s.last_action_result = (
                     f"Hired {candidate.name} ({cid}) — informed hire. "
                     f"Budget remaining: {s.budget_remaining:.0f}."
@@ -234,6 +253,16 @@ class HiringEnvironment:
 
         # ---- SKIP ---------------------------------------------------- #
         elif action.action == "skip":
+            interview_score = s.interviews_done.get(cid)
+            probe_score = s.probes_done.get(cid)
+            evidence_score = float(probe_score if probe_score is not None else interview_score if interview_score is not None else candidate.resume_score)
+            probe_gap = s.probe_gaps.get(cid, 0.0)
+            if evidence_score < 0.45:
+                step_reward += REWARD_SKIP_WEAK
+                reason_parts.append("bonus: skipped weak candidate")
+            if probe_score is not None and (probe_score < 0.45 or abs(probe_gap) >= 0.20):
+                step_reward += REWARD_SKIP_DECOY_SIGNAL
+                reason_parts.append("bonus: skipped candidate with decoy signal")
             s.skipped.append(cid)
             s.last_action_result = f"Skipped {candidate.name} ({cid}). No cost."
 
@@ -242,23 +271,27 @@ class HiringEnvironment:
                 f"Error: unknown action '{action.action}'. "
                 "Valid actions: interview, probe, hire, skip, finalize."
             )
-            return self._build_observation(), HiringReward(
-                step_reward=0.0, reason="Unknown action."
-            )
+            return reject(PENALTY_INVALID_ACTION, "Unknown action.")
 
         if (
             self._task_config.adversarial
             and s.step_num >= self._task_config.adversarial_start_step
         ):
-            # s.last_action_result += " | NPC: You're hiring too slowly!"
-            s.last_action_result += f" | NPC: {self._npc_message(candidate)}"
+            npc_message = self._npc_message(candidate)
+            if npc_message:
+                s.last_action_result += f" | NPC: {npc_message}"
 
+
+        if s.step_num > 3 and not s.done:
+            step_reward += PENALTY_STEP_DRIFT
+            reason_parts.append("penalty: time pressure")
 
         # ---- Check budget exhaustion --------------------------------- #
-        if s.budget_remaining < 10.0 and not s.done:
+        if s.budget_remaining < 10.0 and not s.done and not s.budget_exhaustion_penalized:
             # Can't do anything useful — auto-end
             if s.budget_remaining < 50.0:
                 step_reward += PENALTY_BUDGET_EXHAUSTED
+                s.budget_exhaustion_penalized = True
                 reason_parts.append("penalty: budget effectively exhausted")
 
         # ---- Check max steps ---------------------------------------- #
@@ -303,6 +336,7 @@ class HiringEnvironment:
             "max_steps": s.max_steps,
             "done": s.done,
             "final_score": s.final_score,
+            "budget_exhaustion_penalized": s.budget_exhaustion_penalized,
             "last_action_result": s.last_action_result,
             # Include true_skill and is_decoy here for judge inspection
             "candidates_full": [
@@ -313,6 +347,7 @@ class HiringEnvironment:
                     "resume_score": c.resume_score,
                     "true_skill": c.true_skill,
                     "is_decoy": c.is_decoy,
+                    "is_coached": c.is_coached,
                     "interview_difficulty": c.interview_difficulty,
                 }
                 for c in s.candidates
@@ -343,6 +378,15 @@ class HiringEnvironment:
             if c.candidate_id == candidate_id:
                 return c
         return None
+
+    def _missing_required_roles(self) -> set[str]:
+        required = set((self._task_config.role_requirements or {}).keys())
+        hired_roles = {
+            c.role
+            for c in self._state.candidates
+            if c.candidate_id in self._state.hires_made
+        }
+        return required - hired_roles
 
     def _probe_score(self, candidate: CandidateProfile, interview_score: float) -> tuple[float, str]:
         """Return a truth-aligned probe score, with optional HF/OpenAI judge support."""
@@ -407,14 +451,20 @@ class HiringEnvironment:
 
     def _npc_message(self, candidate: CandidateProfile | None = None) -> str:
         path = os.path.join(os.path.dirname(__file__), "npc_message_bank.json")
-        with open(path, "r", encoding="utf-8") as f:
-            bank = json.load(f)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                bank = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return ""
 
-        messages = [m for group in bank.values() for m in group]
+        messages = [m for group in bank.values() for m in group if isinstance(m, str)]
+        if not messages:
+            return ""
+
         msg = random.choice(messages)
-
         return msg.format(
             candidate_id=getattr(candidate, "candidate_id", "this candidate"),
-            candidate_name=getattr(candidate, "name", "this candidate"),
+            name=getattr(candidate, "name", "this candidate"),
         )
+
 

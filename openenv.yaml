@@ -51,6 +51,26 @@ tasks:
     noise_level: 0.30
     decoy_fraction: 0.25
 
+  - name: adversarial
+    description: "20 candidates, 25% coached decoys + live adversarial NPC hiring manager pressure."
+    budget: 200
+    num_candidates: 20
+    noise_level: 0.30
+    decoy_fraction: 0.25
+    coached_fraction: 0.25
+    adversarial: true
+    adversarial_start_step: 5
+
+  - name: nightmare
+    description: "25 candidates, 40% coached decoys, tightest budget, escalating NPC pressure."
+    budget: 180
+    num_candidates: 25
+    noise_level: 0.35
+    decoy_fraction: 0.40
+    coached_fraction: 0.40
+    adversarial: true
+    adversarial_start_step: 3
+
 action_space:
   type: discrete
   actions:
@@ -131,20 +151,38 @@ observation_space:
 
 reward:
   step_level:
+    - event: "invalid, missing, or impossible action"
+      value: -0.02
+    - event: "duplicate action on already processed candidate"
+      value: -0.02
+    - event: "non-finalize step after step 3"
+      value: -0.005
     - event: "interview candidate in uncertain zone (resume 0.4-0.75)"
+      value: +0.04
+    - event: "useful probe reveals interview-probe gap >= 0.20"
       value: +0.05
-    - event: "probe after interview"
+    - event: "probe high-risk candidate"
       value: +0.03
-    - event: "hire after interviewing"
-      value: +0.10
+    - event: "low-value probe under tight budget"
+      value: -0.02
+    - event: "hire with strong interview/probe evidence"
+      value: +0.08
+    - event: "hire covers missing required role"
+      value: +0.04
+    - event: "hire despite suspicious signal disagreement"
+      value: -0.08
     - event: "blind hire (hire without interview)"
-      value: -0.05
+      value: -0.10
+    - event: "skip weak candidate"
+      value: +0.02
+    - event: "skip candidate with decoy/coaching signal"
+      value: +0.04
     - event: "budget exhausted"
       value: -0.10
 
   final:
-    easy_medium: "avg(true_skill of hires) - (total_cost / budget), clipped [0, 1]"
-    hard: "avg(true_skill of hires) - (total_cost / budget) - 0.20 * (decoy_hires / total_hires), clipped [0, 1]"
+    all_tasks: "avg_true_skill + team_size_bonus + role_coverage_bonus - cost_penalty - decoy_penalty, with early finalize multiplier, clipped [0, 1]"
+    terminal_step_reward: "On finalize, step_reward equals final_score."
 
 endpoints:
   reset:

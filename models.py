@@ -76,3 +76,4 @@ class HiringState(BaseModel):
     last_action_result: str
     done: bool
     final_score: Optional[float] = None
+    budget_exhaustion_penalized: bool = False
