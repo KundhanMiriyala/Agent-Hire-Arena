@@ -152,34 +152,33 @@ observation_space:
 reward:
   step_level:
     - event: "invalid, missing, or impossible action"
-      value: -20
+      value: -0.02
     - event: "duplicate action on already processed candidate"
-      value: -20
+      value: -0.02
     - event: "non-finalize step after step 3"
-      value: -5
+      value: -0.005
     - event: "interview candidate in uncertain zone (resume 0.4-0.75)"
-      value: +40
+      value: +0.04
     - event: "useful probe reveals interview-probe gap >= 0.20"
-      value: +50
+      value: +0.05
     - event: "probe high-risk candidate"
-      value: +30
+      value: +0.03
     - event: "low-value probe under tight budget"
-      value: -20
+      value: -0.02
     - event: "hire with strong interview/probe evidence"
-      value: +80
+      value: +0.08
     - event: "hire covers missing required role"
-      value: +40
+      value: +0.04
     - event: "hire despite suspicious signal disagreement"
-      value: -80
+      value: -0.08
     - event: "blind hire (hire without interview)"
-      value: -100
+      value: -0.10
     - event: "skip weak candidate"
-      value: +20
+      value: +0.02
     - event: "skip candidate with decoy/coaching signal"
-      value: +40
+      value: +0.04
     - event: "budget exhausted"
-      value: -100
-
+      value: -0.10
   final:
     all_tasks: "avg_true_skill + team_size_bonus + role_coverage_bonus - cost_penalty - decoy_penalty, with early finalize multiplier, clipped [0, 1]"
     terminal_step_reward: "On finalize, step_reward equals final_score."
