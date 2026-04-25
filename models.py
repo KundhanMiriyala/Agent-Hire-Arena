@@ -51,6 +51,9 @@ class HiringObservation(BaseModel):
     max_steps: int
     last_action_result: str
     done: bool
+    candidates_remaining: int             # count of candidates not hired/skipped
+    hiring_manager_message: Optional[str] = None  # NPC adversarial message
+    adversarial_strategy: Optional[str] = None    # NPC strategy type
 
 
 class HiringReward(BaseModel):

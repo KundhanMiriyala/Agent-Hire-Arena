@@ -151,8 +151,8 @@ TASKS: Dict[str, TaskConfig] = {
     "nightmare": TaskConfig(
         name="nightmare",
         num_candidates=25,
-        noise_level=0.35,
-        budget=180.0,
+        noise_level=0.50,
+        budget=150.0,
         seed=777,
         decoy_fraction=0.40,
         coached_fraction=0.40,
@@ -161,7 +161,7 @@ TASKS: Dict[str, TaskConfig] = {
         max_steps=60,
         role_requirements={"ML Engineer": 1, "Backend": 1, "Data Scientist": 1},
         description=(
-            "25 candidates, 40% coached decoys, tightest budget, escalating NPC pressure. "
+            "25 candidates, 40% coached decoys, VERY tight budget (150), escalating NPC pressure. "
             "Maximum difficulty."
         ),
     ),

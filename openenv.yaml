@@ -51,6 +51,26 @@ tasks:
     noise_level: 0.30
     decoy_fraction: 0.25
 
+  - name: adversarial
+    description: "20 candidates with coached decoys + adversarial NPC pressure."
+    budget: 200
+    num_candidates: 20
+    noise_level: 0.30
+    decoy_fraction: 0.25
+    coached_fraction: 0.25
+    adversarial: true
+    adversarial_start_step: 5
+
+  - name: nightmare
+    description: "25 candidates, high coaching/decoy pressure, tight budget, adversarial NPC."
+    budget: 180
+    num_candidates: 25
+    noise_level: 0.35
+    decoy_fraction: 0.40
+    coached_fraction: 0.40
+    adversarial: true
+    adversarial_start_step: 3
+
 action_space:
   type: discrete
   actions:
@@ -131,20 +151,44 @@ observation_space:
 
 reward:
   step_level:
-    - event: "interview candidate in uncertain zone (resume 0.4-0.75)"
+    - event: "invalid or unknown action/candidate"
+      value: -0.02
+    - event: "duplicate interview/probe/hire/skip"
+      value: -0.02
+    - event: "interview in uncertain zone (resume 0.4-0.75)"
+      value: +0.04
+    - event: "useful probe (|interview-probe gap| >= 0.20)"
       value: +0.05
-    - event: "probe after interview"
+    - event: "probe on high-risk profile (high resume/interview)"
       value: +0.03
-    - event: "hire after interviewing"
-      value: +0.10
-    - event: "blind hire (hire without interview)"
-      value: -0.05
-    - event: "budget exhausted"
+    - event: "low-value probe under tight budget"
+      value: -0.02
+    - event: "blind hire (without interview)"
+      value: -0.10
+    - event: "strong-evidence hire"
+      value: +0.08
+    - event: "hire covering missing required role"
+      value: +0.04
+    - event: "suspicious hire with large interview/probe disagreement"
+      value: -0.08
+    - event: "skip weak low-evidence candidate"
+      value: +0.02
+    - event: "skip decoy/coaching-signal candidate after probe"
+      value: +0.04
+    - event: "time drift (non-finalize step after step 3)"
+      value: -0.005
+    - event: "episode becomes effectively budget-stuck"
       value: -0.10
 
   final:
-    easy_medium: "avg(true_skill of hires) - (total_cost / budget), clipped [0, 1]"
-    hard: "avg(true_skill of hires) - (total_cost / budget) - 0.20 * (decoy_hires / total_hires), clipped [0, 1]"
+    formula: "clip((avg_true_skill + team_size_bonus + role_coverage_bonus - cost_penalty - decoy_penalty) * early_finalize_multiplier, 0, 1)"
+    notes:
+      - "team_size_bonus = min(team_size/3, 1) * 0.25"
+      - "role_coverage_bonus = 0.20 * covered_required_roles_fraction"
+      - "cost_penalty = (cost_ratio^1.3) * 0.40"
+      - "decoy_penalty = 0.25 * decoy_hire_ratio"
+      - "early_finalize_multiplier = 0.70 when finalize before step 3, else 1.0"
+      - "On finalize, step_reward returns final_score for terminal learning alignment"
 
 endpoints:
   reset:

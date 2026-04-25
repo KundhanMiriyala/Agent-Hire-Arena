@@ -41,7 +41,7 @@ def grade(state: HiringState, task_config: TaskConfig) -> float:
 
     decoy_hires = sum(1 for c in hired_profiles if c.is_decoy)
     decoy_ratio = decoy_hires / len(hired_profiles) if hired_profiles else 0.0
-    decoy_penalty = 0.25 * decoy_ratio
+    decoy_penalty = 0.50 * decoy_ratio  # Doubled penalty to force careful decoy detection
 
     req = task_config.role_requirements or {}
     if req:
