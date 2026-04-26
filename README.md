@@ -82,6 +82,14 @@ As deception and pressure increase, model performance collapses:
 
 > This is not a capability issue — it is failure under pressure.
 
+## Benchmark Results
+| Difficulty     | Llama-1B (Base) | Gemma-26B (Zero-Shot) | Llama-1B (Post-Trained) |
+|----------------|-----------------|------------------------|--------------------------|
+| Easy           | 0.09            | 0.95                   | 0.99                     |
+| Medium         | 0.20            | 0.63                   | 0.96                     |
+| Hard           | 0.05            | 0.69                   | 0.93                     |
+| Adversarial    | 0.23            | 0.45                   | 0.89                     |
+| Nightmare      | 0.00            | 0.21                   | 0.74                     |
 ---
 
 ## Repository Architecture
