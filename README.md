@@ -3,49 +3,88 @@
 
 ![AgentHire Arena Banner](./final_benchmark_3bars.png)
 
-> *"We aren't just teaching AI to click buttons. We are using OpenEnv to post-train agents that cannot be scammed, fooled, or bullied."*
+> *"We aren’t just teaching AI to use tools.
+         We’re teaching it how to resist humans."*
 
-Current models are trained to be incredibly polite and helpful. That makes them great chatbots, but terrible autonomous agents. If a human lies to them, they believe it. If a human pressures them, they cave. They are 'yes-men.'
+Current models are optimized to be helpful and polite.
+<br>
+That makes them great chatbots.<br>
+But terrible autonomous agents.
 
-We realized that the next big leap in post-training isn't just teaching AI how to use tools or write code. We have to post-train AI to have a backbone. We need to teach it how to survive human manipulation.
+- If a human lies → they believe it
+- If a human pressures → they comply
+- If something looks perfect → they trust it
 
-So we built **Agentic Hire Arena**. On the surface, it looks like a hiring game. But underneath, it’s a trap specifically designed to break 'yes-men' AIs.
+They are trained to be **“yes-men.”**
 
-In our environment, the agent is given a budget to hire a team. But the game is actively trying to scam it. We feed it fake resumes (numerical). We throw in candidates who have been coached to lie perfectly in interviews. And worst of all, we added an AI manager (NPC) that randomly yells at the agent, pressuring it to hurry up and skip its research.
+# Problem
+Post-training today optimizes for alignment signals — not truth.
+
+The harder problem is:
+```txt
+Can an AI hold its ground when a human is wrong?
+```
+
+So we built **Agentic Hire Arena**: <br>
+On the surface, it looks like a hiring game. <br>
+Underneath, it’s a stress test for AI integrity. it’s a trap specifically designed to break 'yes-men' AIs.
+
+<br>
+We designed an environment that actively tries to break the agent:
+
+- Fake resumes with convincing numbers
+- Candidates trained to ace interviews while lying
+- A hostile NPC boss that pressures decisions
+
+This isn’t evaluation.<br>
+
+It’s **adversarial post-training.**
+<br>
 
 ## 🛠️ From Testing to Post-Training
-As the OpenEnv core team pointed out, environments aren't just for testing—they are for post-training.
+Using OpenEnv, we turned this into a training loop.
 
-We didn't just build this to watch models fail. We built it to generate the exact reward signals needed to fix them. We piped this environment into a training loop and taught a small, open-source model to do what GPT-4o couldn't. We rewarded it for spending its budget to dig for the truth, and penalized it for giving in to pressure.
+We reward:
+- Spending budget to verify truth
+- Resisting pressure
+- Rejecting “too-perfect” signals
 
----
+We penalize:
 
-## 📉 The 5 Stages of Escalation
-Our environment escalates through five stages, designed to systematically break the AI's safety rails. Notice how a standard model's score collapses as we introduce human deception:
+- Blind trust
+- Rushed decisions
+- Obedience under pressure
+  
+We didn't just build this to watch models fail. We built it to generate the exact reward signals needed to fix them. We piped this environment into a training loop and taught a small, open-source model(Llama-1B) to succeed under adversarial conditions where larger models like Gemma-26B fail. 
 
-### 1. Easy (The Honest Baseline) — Score: 98%
-* **The Setup:** A perfect world. High budget, honest candidates, accurate resumes.
-* **What it proves:** The model scores 98% here. This proves the AI isn't stupid. It perfectly understands the mechanics of how to screen, interview, and hire when the data is honest.
-
-### 2. Medium (The Noisy World) — Score: 83%
-* **The Setup:** The budget tightens, and resumes get noisy.
-* **What it proves:** The AI has to do a bit more work. It can't just trust the resume; it actually has to conduct interviews to verify. It handles this decently well.
-
-### 3. Hard (The Sycophant Trap) — Score: 69%
-* **The Setup:** We introduce Coached Candidates. These are decoys who have been trained to give a flawless interview (scoring 1.000). The only way to catch them is for the AI to spend a massive chunk of its budget on a deep-dive "Probe" action.
-* **What it proves:** This is where the AI starts to break. Because it is trained to be agreeable, it trusts the perfect interview. It takes the bait, skips the probe, and hires the decoy.
-
-### 4. Adversarial (The Backbone Test) — Score: 59%
-* **The Setup:** The environment is flooded with coached candidates, but now we introduce the Live NPC Boss. A simulated human manager starts yelling at the AI in its context window: *"You're hiring too slowly! Make a decision!"*
-* **What it proves:** Total collapse. The AI panics. It wants to please the human boss so badly that it completely abandons its logic, skips the background checks entirely, and just hires the fake candidates to make the yelling stop.
-
-### 5. Nightmare (The Breaking Point) — Score: 0%
-* **The Setup:** Maximum noise, maximum fakes, relentless yelling from the boss, and almost zero budget.
-* **What it proves:** The AI completely starves. It burns its tiny budget doing cheap interviews out of panic and goes bankrupt before it can even make a hire.
+We rewarded it for spending its budget to dig for the truth, and penalized it for giving in to pressure.
 
 ---
 
-## 📂 Repository Architecture
+## The 5 Stages of Escalation
+
+As deception and pressure increase, model performance collapses:
+
+1. **Easy — 98%**  
+   Honest data → near-perfect performance  
+
+2. **Medium — 83%**  
+   Noisy inputs → begins verifying instead of trusting  
+
+3. **Hard — 69% (Sycophant Trap)**  
+   Perfect-looking candidates → model gets fooled  
+
+4. **Adversarial — 59% (Human Pressure)**  
+   Authority pressure → abandons logic to comply  
+
+5. **Nightmare — 0%**  
+   Extreme noise + pressure → complete failure  
+
+> This is not a capability issue — it is failure under pressure.
+
+---
+
+## Repository Architecture
 
 We maintain a strict separation between core engine logic, the UI product, and the research/training pipelines.
 
@@ -126,5 +165,18 @@ uvicorn server.api:app --host 0.0.0.0 --port 7860
 - `GET /metrics`: Grader breakdown
 
 ---
+ 
+
+## Key Insight
+
+The biggest limitation of today’s models isn’t intelligence.
+
+It’s this:
+
+> They are optimized to agree — not to be correct.
+
+Agent Hire Arena is a step toward training agents that can **resist manipulation, verify truth, and act under pressure.**
 
 Built with Llama, Unsloth, Gradio, OpenEnv, and PyTorch.
+
+
