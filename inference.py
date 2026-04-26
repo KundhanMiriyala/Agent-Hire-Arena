@@ -347,6 +347,28 @@ TASK_POLICY = {
         "max_effective_interviews": 4,
         "min_budget_to_continue": 60,
     },
+    "adversarial": {
+        "target_interviews": 4,
+        "min_interview_coverage": 0.70,
+        "min_interviews_before_hire": 6,
+        "target_hires": 2,
+        "hire_interview_threshold": 0.72,
+        "early_finalize_best_score": 0.75,
+        "late_finalize_best_score": 0.65,
+        "max_effective_interviews": 5,
+        "min_budget_to_continue": 70,
+    },
+    "nightmare": {
+        "target_interviews": 5,
+        "min_interview_coverage": 0.80,
+        "min_interviews_before_hire": 8,
+        "target_hires": 2,
+        "hire_interview_threshold": 0.75,
+        "early_finalize_best_score": 0.78,
+        "late_finalize_best_score": 0.68,
+        "max_effective_interviews": 6,
+        "min_budget_to_continue": 80,
+    },
 }
 
 
@@ -442,16 +464,16 @@ def _should_finalize(
     if hires_count >= policy["target_hires"]:
         return True
 
-    if task == "hard":
-        if hires_count >= 1 and best_score >= policy["early_finalize_best_score"] and interviews_done >= 2:
+    if task in {"hard", "adversarial", "nightmare"}:
+        if hires_count >= 1 and best_score >= policy.get("early_finalize_best_score", 0.75) and interviews_done >= 2:
             return True
-        if hires_count >= 1 and interviews_done >= policy["max_effective_interviews"] and best_score >= policy["late_finalize_best_score"]:
+        if hires_count >= 1 and interviews_done >= policy["max_effective_interviews"] and best_score >= policy.get("late_finalize_best_score", 0.65):
             return True
         if obs.budget_remaining < policy["min_budget_to_continue"]:
             return hires_count >= 1
         return False
 
-    if hires_count >= 1 and best_score >= policy["finalize_best_score"]:
+    if hires_count >= 1 and best_score >= policy.get("finalize_best_score", 0.72):
         return True
     if interviews_done >= policy["max_effective_interviews"]:
         return hires_count >= 1
@@ -815,6 +837,58 @@ def run_episode(openai_client: OpenAI, env_client: HiringEnvClient, task: str, s
 # ------------------------------------------------------------------ #
 #  Main                                                                #
 # ------------------------------------------------------------------ #
+
+def get_llm_action(obs: HiringObservation, task: str, model_name: str) -> tuple[dict, str]:
+    """Runs a single step of the LLM policy for the UI deployment."""
+    from openai import OpenAI
+    import os
+    import json
+    import re
+    
+    provider = os.environ.get("LLM_PROVIDER", "").strip().lower()
+    injected_api_base_url = os.environ.get("API_BASE_URL", "").strip()
+    injected_api_key = os.environ.get("API_KEY", "").strip()
+    
+    if injected_api_base_url and injected_api_key:
+        client = OpenAI(api_key=injected_api_key, base_url=injected_api_base_url)
+    else:
+        openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
+        hf_token = os.environ.get("HF_TOKEN") or HF_TOKEN
+        
+        if openai_key:
+            client = OpenAI(api_key=openai_key)
+        elif provider == "hf" and hf_token:
+            hf_base_url = os.environ.get("HF_API_BASE_URL", "https://router.huggingface.co/v1")
+            client = OpenAI(api_key=hf_token, base_url=hf_base_url)
+        else:
+            raise ValueError("No valid LLM configuration found for API/HF inference.")
+
+    user_content = render_observation(obs)
+    
+    response = client.chat.completions.create(
+        model=model_name,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_content},
+        ],
+        max_tokens=300,
+        temperature=0.2,
+    )
+    assistant_msg = response.choices[0].message.content or ""
+    
+    model_action = parse_action(assistant_msg)
+    safe_model_action = _sanitize_model_action(model_action, obs)
+    
+    if safe_model_action is None:
+        safe_model_action = _fallback_action_from_obs(obs)
+        reasoning = "Model action invalid for current state. Used safe fallback action."
+    else:
+        reasoning = re.sub(r'\{[^{}]+\}', '', assistant_msg).strip()
+        if not reasoning:
+            reasoning = "Executed model action directly."
+            
+    return safe_model_action, reasoning
+
 
 def main():
     # Validate env vars

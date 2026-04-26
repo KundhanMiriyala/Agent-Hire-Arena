@@ -61,15 +61,52 @@
                     </table>
                 </div>
 
-                <div class="controls-row">
-                    <div class="input-group">
+                <!-- Global / Environment Controls -->
+                <div class="controls-row" style="background: rgba(59, 130, 246, 0.05);">
+                    <div class="input-group" style="flex:1;">
                         <label for="task-select">Deployment Difficulty</label>
                         <select id="task-select">
                             <!-- Populated by JS -->
                         </select>
                     </div>
-                    <button class="btn btn-primary" id="deploy-btn">Deploy Meta Llama-3 Policy</button>
-                    <button class="btn btn-secondary" id="reset-btn">Reset</button>
+                    <button class="btn btn-secondary" id="reset-btn" style="flex:1;">Reset Env</button>
+                    <button class="btn btn-secondary" id="get-state-btn" style="flex:1;">Get State</button>
+                </div>
+
+                <!-- Manual Step Controls -->
+                <div class="controls-row" style="background: rgba(245, 158, 11, 0.05);">
+                    <div class="input-group" style="flex:1;">
+                        <label>Manual Action</label>
+                        <select id="manual-action">
+                            <option value="interview">Interview</option>
+                            <option value="probe">Probe</option>
+                            <option value="hire">Hire</option>
+                            <option value="skip">Skip</option>
+                            <option value="finalize">Finalize</option>
+                        </select>
+                    </div>
+                    <div class="input-group" style="flex:1;">
+                        <label>Candidate ID</label>
+                        <select id="manual-candidate">
+                            <!-- Populated by JS -->
+                            <option value="">-- None --</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary" id="manual-step-btn" style="flex:1; border-color: var(--accent-orange); color: var(--accent-orange);">Step (Manual)</button>
+                </div>
+
+                <!-- Agent Controls -->
+                <div class="controls-row" style="background: rgba(16, 185, 129, 0.05);">
+                    <div class="input-group" style="flex:2;">
+                        <label for="model-select">Agent Model</label>
+                        <select id="model-select">
+                            <option value="heuristic">Fallback Heuristic Policy</option>
+                            <option value="meta-llama/Llama-3.2-1B-Instruct">meta-llama/Llama-3.2-1B-Instruct</option>
+                            <option value="google/gemma-4-26B-A4B-it">google/gemma-4-26B-A4B-it</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" id="agent-step-btn" style="flex:1;">Step (Agent)</button>
+                    <button class="btn btn-primary" id="deploy-btn" style="flex:1;">Start (Auto)</button>
                 </div>
             </div>
 
