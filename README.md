@@ -14,7 +14,7 @@ base_path: /web
 
 - **Train the Agent (Colab):** [Open Notebook](https://colab.research.google.com/drive/1UfcIl1JTbpRRbsXoZc7QsYS2ygfiTpP0?usp=sharing)
 - **Live Demo (HF Space):** [Try Agent Hire Arena](https://huggingface.co/spaces/kundhan3232/AgentHire-Arena/)
-- **Deep Dive Blog:** [Read the Full Story](YOUR_BLOG_LINK)
+- **Deep Dive Blog:** [Read the Full Story](./blog.md)
 
 
 ![AgentHire Arena Banner](./final_benchmark_3bars.png)
