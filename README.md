@@ -1,3 +1,12 @@
+---
+title: AgentHire Arena
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+base_path: /web
+---
+
 
 # Agent Hire Arena
 

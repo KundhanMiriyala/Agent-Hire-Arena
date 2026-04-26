@@ -15,6 +15,12 @@ const els = {
     auditLog: document.getElementById('audit-log'),
     envStatus: document.getElementById('env-status'),
     modelStatus: document.getElementById('model-status'),
+    modelSelect: document.getElementById('model-select'),
+    getStateBtn: document.getElementById('get-state-btn'),
+    manualAction: document.getElementById('manual-action'),
+    manualCandidate: document.getElementById('manual-candidate'),
+    manualStepBtn: document.getElementById('manual-step-btn'),
+    agentStepBtn: document.getElementById('agent-step-btn'),
 };
 
 let currentTask = null;
@@ -28,6 +34,9 @@ async function init() {
 
     els.resetBtn.addEventListener('click', resetEnv);
     els.deployBtn.addEventListener('click', toggleDeployment);
+    els.getStateBtn.addEventListener('click', getState);
+    els.manualStepBtn.addEventListener('click', doManualStep);
+    els.agentStepBtn.addEventListener('click', doAgentStepSingle);
 }
 
 // Logging
@@ -37,6 +46,99 @@ function addLog(message, type = 'system') {
     entry.textContent = message;
     els.auditLog.appendChild(entry);
     els.auditLog.scrollTop = els.auditLog.scrollHeight;
+}
+
+async function getState() {
+    try {
+        const res = await fetch(`${API_URL}/state`);
+        const state = await res.json();
+        addLog(`Raw State: ${JSON.stringify(state, null, 2)}`, 'system');
+    } catch (e) {
+        addLog(`Error fetching state: ${e.message}`, 'error');
+    }
+}
+
+async function doManualStep() {
+    if (isDeploying) return;
+    const action = els.manualAction.value;
+    const candidate_id = els.manualCandidate.value;
+    
+    if (action !== 'finalize' && !candidate_id) {
+        addLog('Select a candidate ID first', 'error');
+        return;
+    }
+    
+    try {
+        const res = await fetch(`${API_URL}/step`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: action, candidate_id: candidate_id })
+        });
+        
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Step failed');
+        }
+        
+        const data = await res.json();
+        addLog(`Manual Action: {"action": "${action}", "candidate_id": "${candidate_id}"}`, 'action');
+        
+        updateUI(data.observation);
+        
+        if (data.observation.last_action_result) {
+            addLog(`Result: ${data.observation.last_action_result}`, 'result');
+        }
+        if (data.reward && data.reward.step_reward !== undefined) {
+             addLog(`Reward: ${data.reward.step_reward.toFixed(2)} (${data.reward.reason})`, 'system');
+        }
+        if (data.observation.done) {
+            addLog('Episode completed. Waiting for final grader score...', 'system');
+            await fetchMetrics();
+        }
+    } catch (e) {
+        addLog(`Manual step error: ${e.message}`, 'error');
+    }
+}
+
+async function doAgentStepSingle() {
+    if (isDeploying) return;
+    try {
+        const selectedModelName = els.modelSelect.options[els.modelSelect.selectedIndex].text;
+        addLog(`Running single step with ${selectedModelName}...`, 'system');
+        
+        const res = await fetch(`${API_URL}/agent_step`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: els.modelSelect.value })
+        });
+        
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Step failed');
+        }
+        
+        const data = await res.json();
+        
+        if (data.fallback) {
+            addLog(`⚠️ LLM unavailable — fell back to Heuristic Policy. Reason: ${data.fallback_reason}`, 'error');
+        }
+        addLog(`Reasoning: ${data.reasoning}`, 'reasoning');
+        addLog(`Action: ${JSON.stringify(data.action)}`, 'action');
+        updateUI(data.observation);
+        
+        if (data.observation.last_action_result) {
+            addLog(`Result: ${data.observation.last_action_result}`, 'result');
+        }
+        if (data.reward && data.reward.step_reward !== undefined) {
+             addLog(`Reward: ${data.reward.step_reward.toFixed(2)} (${data.reward.reason})`, 'system');
+        }
+        if (data.observation.done) {
+            addLog('Episode completed. Waiting for final grader score...', 'system');
+            await fetchMetrics();
+        }
+    } catch (e) {
+        addLog(`Agent execution error: ${e.message}`, 'error');
+    }
 }
 
 // API Calls
@@ -100,7 +202,8 @@ async function toggleDeployment() {
     els.modelStatus.textContent = 'Running';
     els.modelStatus.className = 'status-badge running';
     
-    addLog('Booting Meta Llama-3 Policy...', 'system');
+    const selectedModelName = els.modelSelect.options[els.modelSelect.selectedIndex].text;
+    addLog(`Booting ${selectedModelName}...`, 'system');
     
     // Start polling the agent endpoint
     runAgentLoop();
@@ -111,7 +214,9 @@ async function runAgentLoop() {
     
     try {
         const res = await fetch(`${API_URL}/agent_step`, {
-            method: 'POST'
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: els.modelSelect.value })
         });
         
         if (!res.ok) {
@@ -120,6 +225,11 @@ async function runAgentLoop() {
         }
         
         const data = await res.json();
+        
+        // Notify if LLM failed and we fell back to heuristic
+        if (data.fallback) {
+            addLog(`⚠️ LLM unavailable — fell back to Heuristic Policy. Reason: ${data.fallback_reason}`, 'error');
+        }
         
         // Log the thought process
         addLog(`Reasoning: ${data.reasoning}`, 'reasoning');
@@ -139,7 +249,7 @@ async function runAgentLoop() {
         if (data.observation.done) {
             isDeploying = false;
             els.deployBtn.disabled = false;
-            els.deployBtn.textContent = 'Deploy Meta Llama-3 Policy';
+            els.deployBtn.textContent = 'Deploy';
             els.modelStatus.textContent = 'Finished';
             els.modelStatus.className = 'status-badge';
             addLog('Episode completed. Waiting for final grader score...', 'system');
@@ -154,7 +264,7 @@ async function runAgentLoop() {
         addLog(`Agent execution error: ${e.message}`, 'error');
         isDeploying = false;
         els.deployBtn.disabled = false;
-        els.deployBtn.textContent = 'Deploy Meta Llama-3 Policy';
+        els.deployBtn.textContent = 'Deploy';
         els.modelStatus.textContent = 'Error';
         els.modelStatus.className = 'status-badge';
     }
@@ -240,6 +350,17 @@ function updateUI(obs) {
             <td>${statusHtml}</td>
         `;
         els.candidatesBody.appendChild(tr);
+    }
+    
+    // Update manual candidate dropdown
+    els.manualCandidate.innerHTML = '<option value="">-- None --</option>';
+    for (const c of obs.candidates) {
+        if (!hiresMade.includes(c.candidate_id) && !(obs.skipped || []).includes(c.candidate_id)) {
+            const option = document.createElement('option');
+            option.value = c.candidate_id;
+            option.textContent = `${c.candidate_id} (${c.name})`;
+            els.manualCandidate.appendChild(option);
+        }
     }
 }
 

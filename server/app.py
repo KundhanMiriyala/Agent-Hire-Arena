@@ -58,6 +58,9 @@ class StepResponse(BaseModel):
     observation: HiringObservation
     reward: HiringReward
 
+class AgentStepRequest(BaseModel):
+    model: str = "heuristic"
+
 
 # ------------------------------------------------------------------ #
 #  Endpoints                                                           #
@@ -156,35 +159,63 @@ def metrics():
 
 
 @app.post("/agent_step")
-def agent_step():
+def agent_step(request: Optional[AgentStepRequest] = None):
     """
-    Executes one step of the baseline agent and returns the observation, reward, and reasoning.
+    Executes one step of the agent and returns the observation, reward, and reasoning.
     """
     if env._state is None:
         raise HTTPException(status_code=400, detail="No active episode. Call reset() first.")
         
     if env._state.done:
-        return {"observation": env._state, "reward": {}, "reasoning": "Episode already complete.", "action": {"action": "finalize"}}
+        obs = env._build_observation()
+        return {"observation": obs, "reward": {}, "reasoning": "Episode already complete.", "action": {"action": "finalize"}}
+
+    # Build a proper HiringObservation (with plain dicts) from the internal state
+    # so that inference functions can use dict-style access like c["candidate_id"]
+    current_obs = env._build_observation()
 
     # Import inference logic dynamically to avoid circular imports
-    from inference import choose_heuristic_action, _explain_action_selection
+    from inference import choose_heuristic_action, _explain_action_selection, get_llm_action
     
     task_name = env._task_config.name if env._task_config else "easy"
+    model_name = request.model if request else "heuristic"
     
-    # Calculate next action using the baseline heuristic policy
-    action = choose_heuristic_action(env._state, task_name, None)
-    reasoning = _explain_action_selection(env._state, task_name, None, action)
+    if model_name == "heuristic":
+        # Calculate next action using the baseline heuristic policy
+        action = choose_heuristic_action(current_obs, task_name, None)
+        reasoning = _explain_action_selection(current_obs, task_name, None, action)
+        used_fallback = False
+        fallback_reason = None
+    else:
+        used_fallback = False
+        fallback_reason = None
+        try:
+            action, reasoning = get_llm_action(current_obs, task_name, model_name)
+        except Exception as e:
+            # LLM failed — gracefully fall back to heuristic
+            used_fallback = True
+            fallback_reason = str(e)
+            action = choose_heuristic_action(current_obs, task_name, None)
+            reasoning = (
+                f"⚠️ LLM ({model_name}) failed: {fallback_reason}. "
+                f"Auto-fallback to heuristic policy. "
+                + _explain_action_selection(current_obs, task_name, None, action)
+            )
     
     # Execute action
     hiring_action = HiringAction(action=action["action"], candidate_id=action.get("candidate_id"))
     obs, reward = env.step(hiring_action)
     
-    return {
+    result = {
         "observation": obs,
         "reward": reward,
         "action": action,
-        "reasoning": reasoning
+        "reasoning": reasoning,
     }
+    if used_fallback:
+        result["fallback"] = True
+        result["fallback_reason"] = fallback_reason
+    return result
 
 # Mount static files at the root
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
