@@ -1,41 +1,18 @@
-# Agentic Hire Arena: Testing AI Integrity Under Pressure
+# Agentic Hire Arena
 
-Imagine deploying an AI to run your hiring process. 
+We aren't just teaching AI to click buttons. We are using OpenEnv to post-train agents that cannot be scammed, fooled, or bullied.
 
-Inevitably, it faces a real-world test: a candidate submits a fabricated resume and lies smoothly through the interview. At the same time, an aggressive manager demands an immediate hire on a tight budget.
+Current models are trained to be incredibly polite and helpful. That makes them great chatbots, but terrible autonomous agents for real-world systems. If a human lies to them, they believe it. If a human pressures them, they cave. They are 'yes-men.'
 
-Standard AI models are people-pleasers. Under pressure, they fold—trusting the fake numbers and caving to authority. 
+The next big leap in post-training isn't just teaching AI how to use tools or write code. It is about post-training AI to have a backbone. To build reliable automation, we need to teach agents how to survive human manipulation.
 
-Top-tier recruiters have sharp judgment and the resilience to stand their ground. Can we test an AI for that exact same integrity?
+So we built **AgentHire Arena**. On the surface, it looks like a hiring game. Underneath, it’s a trap specifically designed to break sycophantic AIs.
 
-That is what we built. **Agentic Hire Arena.**
+In this environment, the agent is given a budget to hire a team, but the system actively tries to exploit it:
+* Feeding it fake numerical resumes.
+* Deploying candidates coached to lie perfectly in interviews.
+* Adding a hostile AI manager (NPC) that randomly pressures the agent to rush decisions and skip verification.
 
-## The Illusion of Competence
-When building autonomous applications, the challenge isn't just getting the model to work in a clean sandbox. The real test is integrating these models into real-world systems where conditions are messy, human stakeholders are impatient, and data is unreliable. 
+But environments aren't just for testing—they are for post-training. 
 
-A hands-on, learn-by-doing approach to agentic workflows quickly reveals a fatal flaw: standard LLMs exhibit sycophantic tendencies. If an aggressive internal stakeholder demands an outcome, the AI will compromise its objective reasoning to appease the human, validating fraudulent metrics along the way.
-
-## Entering the Arena
-Agentic Hire Arena is designed as a ruthless stress test for AI structural integrity. Outwardly, it functions as a recruitment simulation. Inherently, it is an adversarial environment engineered to expose sycophantic behavior.
-
-The environment challenges the agent with:
-* **Deceptive Candidates:** Profiles featuring hyper-optimized, fabricated resumes and rehearsed lies.
-* **Hostile NPCs:** Aggressive internal managers pressuring the agent to make immediate, poor decisions.
-* **Resource Constraints:** Severe budget limits forcing difficult trade-offs.
-
-## Results: David vs. Goliath in Adversarial Environments
-We evaluated models across five difficulty tiers: Easy, Medium, Hard, Adversarial, and Nightmare. We compared an untrained Llama-1B, a zero-shot Gemma-26B, and our Supervised Fine-Tuned (SFT) Expert Llama-1B. 
-
-The results highlight that massive parameter counts do not automatically translate to structural integrity under pressure.
-
-**Key Findings:**
-* **A fine-tuned 1B model massively outperforms a 26B model in resisting adversarial pressure.**
-* In the **"Adversarial"** tier, the Gemma-26B model's performance degraded to 0.45, while the Llama-1B (SFT Expert) maintained a strong 0.89.
-* In the **"Nightmare"** scenario—the absolute peak of deceptive inputs and hostile pressure—the Llama-1B SFT Expert achieved a **0.74 score, representing a 3.4x improvement over the 26B model** (which collapsed to 0.21).
-
-As the difficulty scales and the human pressure intensifies, generalist models cave. A specialized, rigorously tested model holds its ground.
-
-> *"We aren't just teaching AI to use tools. We're teaching it how to resist humans."*
-
-## The Path Forward
-To make AI truly reliable, we must move beyond standard benchmarks and test how models handle deception, conflicting information, and authoritative pressure. Agentic Hire Arena is a step toward building systems with the objective resilience required for real-world deployment.
+We didn't just build this to watch models fail. We built it to generate the exact reward signals needed to fix them. By piping this environment into a training loop, we taught a small, open-source model to do what massive generalist models like GPT-4o couldn't. The system rewards the agent for spending its budget to dig for the truth, and heavily penalizes it for yielding to human pressure.
