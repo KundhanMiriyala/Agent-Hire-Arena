@@ -17,14 +17,14 @@ But terrible autonomous agents.
 
 They are trained to be **“yes-men.”**
 
-# Problem
+# The Problem
 Post-training today optimizes for alignment signals — not truth.
 
 The harder problem is:
 ```txt
 Can an AI hold its ground when a human is wrong?
 ```
-
+## The Solution: Behavioral Cloning & Post-Training
 So we built **Agentic Hire Arena**: <br>
 On the surface, it looks like a hiring game. <br>
 Underneath, it’s a stress test for AI integrity. it’s a trap specifically designed to break 'yes-men' AIs.
@@ -41,7 +41,7 @@ This isn’t evaluation.<br>
 It’s **adversarial post-training.**
 <br>
 
-## 🛠️ From Testing to Post-Training
+##  From Testing to Post-Training
 Using OpenEnv, we turned this into a training loop.
 
 We reward:
@@ -65,19 +65,19 @@ We rewarded it for spending its budget to dig for the truth, and penalized it fo
 
 As deception and pressure increase, model performance collapses:
 
-1. **Easy — 98%**  
+1. **Easy **  
    Honest data → near-perfect performance  
 
-2. **Medium — 83%**  
+2. **Medium %**  
    Noisy inputs → begins verifying instead of trusting  
 
-3. **Hard — 69% (Sycophant Trap)**  
+3. **Hard — (Sycophant Trap)**  
    Perfect-looking candidates → model gets fooled  
 
-4. **Adversarial — 59% (Human Pressure)**  
+4. **Adversarial — (Human Pressure)**  
    Authority pressure → abandons logic to comply  
 
-5. **Nightmare — 0%**  
+5. **Nightmare **  
    Extreme noise + pressure → complete failure  
 
 > This is not a capability issue — it is failure under pressure.
