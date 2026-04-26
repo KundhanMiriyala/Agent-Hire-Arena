@@ -1,3 +1,11 @@
+---
+title: AgentHire Arena
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 # AgentHire Arena
 
 AgentHire Arena is an OpenEnv hiring simulation for evaluating agent decision-making under uncertainty, budget constraints, and delayed final rewards.
