@@ -13,7 +13,7 @@ base_path: /web
 ## Quick Links
 
 - **Train the Agent (Colab):** [Open Notebook](https://colab.research.google.com/drive/1UfcIl1JTbpRRbsXoZc7QsYS2ygfiTpP0?usp=sharing)
-- **Live Demo (HF Space):** [Try Agent Hire Arena](https://huggingface.co/spaces/kundhan3232/AgentHire-Arena/)
+- **Live Demo (HF Space):** [Try Agent Hire Arena](https://kundhan3232-agent-hire-arena.hf.space)
 - **Deep Dive Blog:** [Read the Full Story](./blog.md)
 
 
