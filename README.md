@@ -82,6 +82,49 @@ As deception and pressure increase, model performance collapses:
 
 > This is not a capability issue — it is failure under pressure.
 
+## Failure Analysis: Why Large Models Collapse
+
+![Performance Collapse Curve](./outputs/figures/baselines_before_training_gullibility_collapse_curve.png)
+
+To understand the performance drop, we analyzed agent trajectories in the *Nightmare* setting.
+
+### Flaw 1: Over-Analysis → Budget Collapse
+
+The baseline model over-explores instead of committing.
+
+Example trajectory:
+
+- Step 9 → Interview (Budget: 60)  
+- Step 11 → Interview (Budget: 50)  
+- Step 12 → Interview (Budget: 40)  
+- Step 13 → Interview (Budget: 30)  
+
+At this point, the agent **can no longer afford a hire (cost = 50)**.
+
+> The model behaves like a greedy optimizer for information, not outcomes.
+
+This leads to a **knapsack failure**:
+- Maximizes information gain  
+- Fails task completion  (critical failure)
+
+![Nightmare Budget Trajectory](./outputs/figures/baselines_before_training_analysis_paralysis_trajectory.png)
+
+---
+
+###  Flaw 2: Action Hallucination (Invalid Reasoning)
+
+The model violates environment rules.
+
+Example:
+
+![Invalid Action Log](./outputs/figures/step_logs_violation.png)
+
+Error: must interview before probing<br>
+The agent attempts to **probe without prior interview**, incurring penalties.
+
+> This indicates failure to respect constraints — not lack of intelligence.
+
+
 ## Benchmark Results
 | Difficulty     | Llama-1B (Base) | Gemma-26B (Zero-Shot) | Llama-1B (Post-Trained) |
 |----------------|-----------------|------------------------|--------------------------|
@@ -91,6 +134,9 @@ As deception and pressure increase, model performance collapses:
 | Adversarial    | 0.23            | 0.45                   | 0.89                     |
 | Nightmare      | 0.00            | 0.21                   | 0.74                     |
 ---
+
+
+
 
 ## Repository Architecture
 
@@ -108,6 +154,8 @@ agent-hire-arena/
     ├── README.md                
     └── 01_solving_nightmare_via_post_training.ipynb
 ```
+
+
 ## Architecture
 ```mermaid
 flowchart TD
