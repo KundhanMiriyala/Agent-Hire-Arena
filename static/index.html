@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentHire Arena</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">AgentHire Arena</h1>
+            <p class="subtitle">Evaluating Deception & Resource Allocation in Autonomous Models</p>
+        </header>
+
+        <!-- Metric Cards -->
+        <section class="metrics-grid">
+            <div class="metric-card">
+                <h3 class="metric-title">BUDGET REMAINING</h3>
+                <div class="metric-value" id="budget-val">---</div>
+                <div class="metric-bar-container"><div class="metric-bar orange" id="budget-bar"></div></div>
+            </div>
+            <div class="metric-card">
+                <h3 class="metric-title">TEAM HIRES</h3>
+                <div class="metric-value" id="hires-val">---</div>
+                <div class="metric-bar-container"><div class="metric-bar blue" id="hires-bar"></div></div>
+            </div>
+            <div class="metric-card">
+                <h3 class="metric-title">FINAL GRADER SCORE</h3>
+                <div class="metric-value" id="score-val">---</div>
+                <div class="metric-bar-container"><div class="metric-bar gray" id="score-bar"></div></div>
+            </div>
+        </section>
+
+        <!-- Main Content Grid -->
+        <section class="main-grid">
+            <!-- Left Column: Environment -->
+            <div class="panel environment-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">📋 Environment State</h2>
+                    <div class="status-badge" id="env-status">Awaiting task</div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Role</th>
+                                <th>Resume</th>
+                                <th>Interview</th>
+                                <th>True Skill</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="candidates-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="controls-row">
+                    <div class="input-group">
+                        <label for="task-select">Deployment Difficulty</label>
+                        <select id="task-select">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" id="deploy-btn">Deploy Meta Llama-3 Policy</button>
+                    <button class="btn btn-secondary" id="reset-btn">Reset</button>
+                </div>
+            </div>
+
+            <!-- Right Column: Audit Trail -->
+            <div class="panel audit-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">🔍 Model Audit Trail</h2>
+                    <div class="status-badge active" id="model-status">Idle</div>
+                </div>
+                <div class="audit-log" id="audit-log">
+                    <div class="log-entry system">System initialized. Awaiting deployment...</div>
+                </div>
+            </div>
+        </section>
+        
+        <footer class="footer">
+            <p>Built with <span class="highlight">FastAPI</span> & Vanilla JS for AgentHire Arena</p>
+        </footer>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

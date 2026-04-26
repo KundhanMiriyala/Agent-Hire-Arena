@@ -8,7 +8,7 @@ def _render_observation(obs) -> str:
         return "No active episode. Click Reset."
     lines = []
     lines.append(f"Step: {obs.step_num} / {obs.max_steps}")
-    lines.append(f"Budget remaining: {obs.budget_remaining:.0f} (interview=10, probe=20, hire=50)")
+    lines.append(f"Budget remaining: {obs.budget_remaining:.0f} (interview=10, probe=20-30, hire=50)")
     lines.append(f"Hired: {', '.join(obs.hires_made) if obs.hires_made else 'none'}")
     lines.append(f"Skipped: {', '.join(obs.skipped) if obs.skipped else 'none'}")
     lines.append("")
@@ -91,5 +91,5 @@ def mount_ui(app, env):
         reset_btn.click(do_reset, inputs=[task_dropdown], outputs=[obs_md, candidate_dropdown, metrics_md])
         step_btn.click(do_step, inputs=[candidate_dropdown, action_radio], outputs=[obs_md, candidate_dropdown, metrics_md])
 
-    # Mount at /ui
-    gr.mount_gradio_app(app, demo, path="/ui")
+    # Mount at /
+    return gr.mount_gradio_app(app, demo, path="/")

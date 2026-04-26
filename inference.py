@@ -22,6 +22,7 @@ import re
 import json
 import time
 from typing import Optional
+import numpy as np
 import requests
 
 from openai import OpenAI
@@ -651,7 +652,7 @@ def choose_heuristic_action(obs: HiringObservation, task: str, safe_model_action
 #  Single episode runner                                               #
 # ------------------------------------------------------------------ #
 
-def run_episode(openai_client: OpenAI, env_client: HiringEnvClient, task: str) -> float:
+def run_episode(openai_client: OpenAI, env_client: HiringEnvClient, task: str, seed: int = 42) -> float:
     """
     Run a full episode for the given task.
     Returns the final_score from the grader.
@@ -659,6 +660,10 @@ def run_episode(openai_client: OpenAI, env_client: HiringEnvClient, task: str) -
     print(f"\n{'='*60}")
     print(f"  TASK: {task.upper()}")
     print(f"{'='*60}")
+
+    # Set seed for reproducibility
+    np.random.seed(seed)
+    print(f"  [INFO] Set random seed to {seed}")
 
     # Emit machine-parseable start line required by the validator
     print(f"[START] task={task} env=AgentHire-Arena model={MODEL_NAME}")
@@ -860,28 +865,37 @@ def main():
         f"model={MODEL_NAME}, max_tokens=300, temperature=0.2"
     )
 
-    # Run all tasks and collect scores
-    results = {}
-    for task in TASKS_TO_RUN:
+    # Fetch available tasks
+    response = requests.get(f"{env_base_url}/tasks", timeout=5)
+    all_tasks = response.json() if response.status_code == 200 else ["easy", "medium", "hard", "adversarial", "nightmare"]
+
+    # Get seed from environment variable or use default 42
+    seed = os.environ.get("SEED", "42").strip()
+    seed_value = int(seed) if seed else 42
+    print(f"\n[INFO] Running with seed={seed_value}\n")
+
+    # Run all tasks and collect results
+    print(f"\n{'='*70}")
+    print(f"  RUNNING {len(all_tasks)} TASKS")
+    print(f"{'='*70}")
+
+    final_scores = {}
+    for task in all_tasks:
         try:
-            score = run_episode(openai_client, env_client, task)
-            results[task] = score
+            final_score = run_episode(openai_client, env_client, task, seed=seed_value)
+            final_scores[task] = final_score
         except Exception as e:
-            print(f"\n[ERROR] Task '{task}' failed: {e}")
-            results[task] = 0.0
+            print(f"[ERROR] Task {task} failed: {e}")
+            final_scores[task] = 0.0
 
-    # Summary
-    print(f"\n{'='*60}")
-    print("  FINAL RESULTS")
-    print(f"{'='*60}")
-    for task, score in results.items():
-        bar = "█" * int(score * 20)
-        print(f"  {task:<8}  {score:.4f}  {bar}")
-    avg = sum(results.values()) / len(results)
-    print(f"  {'avg':<8}  {avg:.4f}")
-    print(f"{'='*60}\n")
-
-    return results
+    # Print final summary in machine-readable format
+    print(f"\n{'='*70}")
+    print(f"  FINAL RESULTS")
+    print(f"{'='*70}")
+    for task, score in final_scores.items():
+        print(f"  {task:15s}: {score:.4f}")
+    avg_score = sum(final_scores.values()) / len(final_scores)
+    print(f"\n  AVERAGE SCORE: {avg_score:.4f}")
 
 
 if __name__ == "__main__":

@@ -187,4 +187,3 @@ Agent Hire Arena is a step toward training agents that can **resist manipulation
 
 Built with Llama, Unsloth, Gradio, OpenEnv, and PyTorch.
 
-

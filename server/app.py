@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
 
@@ -37,16 +38,7 @@ app.add_middleware(
 
 # One environment instance per server process (single-session for HF Spaces)
 env = HiringEnvironment()
-# Mount Gradio UI (interactive) — optional but helpful for Spaces
-try:
-    from server.ui import mount_ui
-    mount_ui(app, env)
-except Exception as e:
-    # If Gradio isn't available or mounting fails, continue serving API only
-    import traceback
-    tb = traceback.format_exc()
-    print("[WARN] Failed to mount Gradio UI:")
-    print(tb)
+# Static files will be mounted at the end to avoid shadowing API endpoints
 
 
 # ------------------------------------------------------------------ #
@@ -71,7 +63,7 @@ class StepResponse(BaseModel):
 #  Endpoints                                                           #
 # ------------------------------------------------------------------ #
 
-@app.get("/")
+@app.get("/info")
 def root():
     return {
         "name": "AgentHire Arena",
@@ -162,6 +154,40 @@ def metrics():
         "budget_total": env._state.budget_total,
     }
 
+
+@app.post("/agent_step")
+def agent_step():
+    """
+    Executes one step of the baseline agent and returns the observation, reward, and reasoning.
+    """
+    if env._state is None:
+        raise HTTPException(status_code=400, detail="No active episode. Call reset() first.")
+        
+    if env._state.done:
+        return {"observation": env._state, "reward": {}, "reasoning": "Episode already complete.", "action": {"action": "finalize"}}
+
+    # Import inference logic dynamically to avoid circular imports
+    from inference import choose_heuristic_action, _explain_action_selection
+    
+    task_name = env._task_config.name if env._task_config else "easy"
+    
+    # Calculate next action using the baseline heuristic policy
+    action = choose_heuristic_action(env._state, task_name, None)
+    reasoning = _explain_action_selection(env._state, task_name, None, action)
+    
+    # Execute action
+    hiring_action = HiringAction(action=action["action"], candidate_id=action.get("candidate_id"))
+    obs, reward = env.step(hiring_action)
+    
+    return {
+        "observation": obs,
+        "reward": reward,
+        "action": action,
+        "reasoning": reasoning
+    }
+
+# Mount static files at the root
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 # ------------------------------------------------------------------ #
 #  Entry point                                                         #
