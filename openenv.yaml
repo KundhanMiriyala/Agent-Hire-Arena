@@ -43,7 +43,10 @@ tasks:
     num_candidates: 15
     noise_level: 0.20
     decoy_fraction: 0.10
-    role_requirements: ["Backend", "Frontend", "Data Scientist"]
+    role_requirements:
+      Backend: 1
+      Frontend: 1
+      Data Scientist: 1
 
   - name: hard
     description: "20 candidates, high noise + 25% decoys. Zero budget slack. Misleading resumes."
@@ -68,7 +71,10 @@ tasks:
     num_candidates: 25
     noise_level: 0.50
     decoy_fraction: 0.50
-    role_requirements: ["Backend", "Frontend", "Data Scientist"]
+    role_requirements:
+      Backend: 1
+      Frontend: 1
+      Data Scientist: 1
     coached_fraction: 0.40
     adversarial: true
     adversarial_start_step: 3
