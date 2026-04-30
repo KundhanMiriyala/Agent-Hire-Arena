@@ -12,9 +12,10 @@ base_path: /web
 
 ## Quick Links
 
-- **Train the Agent (Colab):** [Open Notebook](https://colab.research.google.com/drive/1UfcIl1JTbpRRbsXoZc7QsYS2ygfiTpP0?usp=sharing)
+- **Train the Agent (Colab):** [Open Notebook](https://colab.research.google.com/drive/1z2GcB3rSgv2nT28V6lxHY58sLgymaPnb?usp=sharing)
 - **Live Demo (HF Space):** [Try Agent Hire Arena](https://kundhan3232-agent-hire-arena.hf.space)
 - **Deep Dive Blog:** [Read the Full Story](./blog.md)
+- **Demo Video:** [Youtube video](https://www.youtube.com/watch?v=mzS-9amXTF0&t=1s)
 
 
 ![AgentHire Arena Banner](./final_benchmark_3bars.png)
